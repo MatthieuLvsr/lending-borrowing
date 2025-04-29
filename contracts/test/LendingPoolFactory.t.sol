@@ -9,8 +9,6 @@ import "../src/DepositTokenFactory.sol";
 
 import "./Mocks/MockERC20.sol";
 
-error AccessControlUnauthorizedAccount(address account, bytes32 needed);
-
 contract LendingPoolFactoryTest is Test {
     LendingPoolFactory factory;
     DepositTokenFactory depositTokenFactory;
@@ -34,14 +32,38 @@ contract LendingPoolFactoryTest is Test {
 
         // Grant the GOVERNOR_ROLE to the test contract
         factory.grantRole(factory.GOVERNOR_ROLE(), governor);
-        depositTokenFactory.grantRole(depositTokenFactory.GOVERNOR_ROLE(), address(factory));
+        depositTokenFactory.grantRole(
+            depositTokenFactory.GOVERNOR_ROLE(),
+            address(factory)
+        );
+    }
+
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
+        bytes memory buffer = new bytes(2 * length + 2);
+        buffer[0] = "0";
+        buffer[1] = "x";
+        for (uint256 i = 2 * length + 1; i > 1; --i) {
+            buffer[i] = bytes1(uint8(48 + (value % 16)));
+            if (uint8(buffer[i]) > 57) {
+                buffer[i] = bytes1(uint8(buffer[i]) + 39);
+            }
+            value /= 16;
+        }
+        require(value == 0, "Hex length insufficient");
+        return string(buffer);
     }
 
     function testCreateLendingPool() public {
         vm.startPrank(governor);
 
         // Create LendingPool
-        string memory tokenId = factory.createLendingPool(address(mockToken), interestRatePerSecond);
+        string memory tokenId = factory.createLendingPool(
+            address(mockToken),
+            interestRatePerSecond
+        );
 
         // Check that the token ID is correct
         assertEq(tokenId, "MOCK");
@@ -72,7 +94,12 @@ contract LendingPoolFactoryTest is Test {
 
         // Expect revert when non-governor tries to create LendingPool
         vm.expectRevert(
-            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, attacker, factory.GOVERNOR_ROLE())
+            abi.encodePacked(
+                "AccessControl: account ",
+                toHexString(uint256(uint160(attacker)), 20),
+                " is missing role ",
+                toHexString(uint256(factory.GOVERNOR_ROLE()), 32)
+            )
         );
         factory.createLendingPool(address(mockToken), interestRatePerSecond);
 

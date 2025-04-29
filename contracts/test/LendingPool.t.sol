@@ -7,8 +7,6 @@ import "../src/DepositToken.sol";
 
 import "./Mocks/MockERC20.sol";
 
-error AccessControlUnauthorizedAccount(address account, bytes32 needed);
-
 contract LendingPoolTest is Test {
     LendingPool pool;
     MockERC20 mockToken;
@@ -29,11 +27,33 @@ contract LendingPoolTest is Test {
         depositToken = new DepositToken("Deposit Mock Token", "dMOCK");
 
         // Deploy the LendingPool contract
-        pool = new LendingPool(address(mockToken), address(depositToken), interestRatePerSecond);
+        pool = new LendingPool(
+            address(mockToken),
+            address(depositToken),
+            interestRatePerSecond
+        );
         depositToken.grantRole(depositToken.LENDING_ROLE(), address(pool));
 
         // Set the test contract as the owner of the deposit token
         // vm.prank(owner);
+    }
+
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
+        bytes memory buffer = new bytes(2 * length + 2);
+        buffer[0] = "0";
+        buffer[1] = "x";
+        for (uint256 i = 2 * length + 1; i > 1; --i) {
+            buffer[i] = bytes1(uint8(48 + (value % 16)));
+            if (uint8(buffer[i]) > 57) {
+                buffer[i] = bytes1(uint8(buffer[i]) + 39);
+            }
+            value /= 16;
+        }
+        require(value == 0, "Hex length insufficient");
+        return string(buffer);
     }
 
     function testDeposit() public {
@@ -129,7 +149,12 @@ contract LendingPoolTest is Test {
 
         // Expect revert when non-owner tries to modify interest rate
         vm.expectRevert(
-            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, attacker, depositToken.GOVERNOR_ROLE())
+            abi.encodePacked(
+                "AccessControl: account ",
+                toHexString(uint256(uint160(attacker)), 20),
+                " is missing role ",
+                toHexString(uint256(depositToken.GOVERNOR_ROLE()), 32)
+            )
         );
         pool.setInterestRate(newInterestRatePerSecond);
 

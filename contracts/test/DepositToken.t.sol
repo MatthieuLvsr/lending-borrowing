@@ -4,8 +4,6 @@ pragma solidity ^0.8.18;
 import "forge-std/Test.sol";
 import "../src/DepositToken.sol";
 
-error AccessControlUnauthorizedAccount(address account, bytes32 needed);
-
 contract DepositTokenTest is Test {
     DepositToken depositToken;
     address owner;
@@ -22,6 +20,24 @@ contract DepositTokenTest is Test {
 
         // Grant the lending role to lendingContract
         depositToken.grantRole(depositToken.LENDING_ROLE(), lendingContract);
+    }
+
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
+        bytes memory buffer = new bytes(2 * length + 2);
+        buffer[0] = "0";
+        buffer[1] = "x";
+        for (uint256 i = 2 * length + 1; i > 1; --i) {
+            buffer[i] = bytes1(uint8(48 + (value % 16)));
+            if (uint8(buffer[i]) > 57) {
+                buffer[i] = bytes1(uint8(buffer[i]) + 39);
+            }
+            value /= 16;
+        }
+        require(value == 0, "Hex length insufficient");
+        return string(buffer);
     }
 
     function testMint() public {
@@ -42,7 +58,12 @@ contract DepositTokenTest is Test {
         // Unauthorized user should fail to mint
         vm.startPrank(user);
         vm.expectRevert(
-            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, depositToken.LENDING_ROLE())
+            abi.encodePacked(
+                "AccessControl: account ",
+                toHexString(uint256(uint160(user)), 20),
+                " is missing role ",
+                toHexString(uint256(depositToken.LENDING_ROLE()), 32)
+            )
         );
         depositToken.mint(user, mintAmount);
         vm.stopPrank();
@@ -81,7 +102,12 @@ contract DepositTokenTest is Test {
         // Unauthorized user should fail to burn
         vm.startPrank(user);
         vm.expectRevert(
-            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, user, depositToken.LENDING_ROLE())
+            abi.encodePacked(
+                "AccessControl: account ",
+                toHexString(uint256(uint160(user)), 20),
+                " is missing role ",
+                toHexString(uint256(depositToken.LENDING_ROLE()), 32)
+            )
         );
         depositToken.burn(user, burnAmount);
         vm.stopPrank();

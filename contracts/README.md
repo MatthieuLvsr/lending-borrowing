@@ -1,66 +1,30 @@
-## Foundry
+# GoldToken ETF Bridge Contract
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This contract allow users to have gold tokens on the Ethereum network that are backed by physical gold. The gold is stored in a vault and the tokens are minted when the gold is deposited and burned when the gold is withdrawn.
+User can also bridge their gold tokens to the Binance Smart Chain network thanks to Chainlink CCIP technologies.
+When the contract has recolted enough fees from the minting and burning of the tokens, the contract allow users to participate in a lottery to win a part of the fees in GoldToken.
 
-Foundry consists of:
+## Quick Start
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```bash
+git clone https://github.com/MatthieuLvsr/lending-borrowing.git
+cd lending-borrowing/contracts
 ```
 
-### Test
+Test the contract
 
-```shell
-$ forge test
+```bash
+forge install
+forge test -vv
+forge coverage
+forge coverage --report debug > report.log
 ```
 
-### Format
+Deploy the contract on the Ethereum network
 
-```shell
-$ forge fmt
+```bash
+source .env
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --sender $PUBLIC_WALLET_ADDRESS --private-key $PRIVATE_KEY -vvvv --broadcast
 ```
 
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+You can delete --broadcast if you just want to see if the deployment script is correct

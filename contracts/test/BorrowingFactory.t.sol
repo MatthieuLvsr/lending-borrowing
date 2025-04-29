@@ -7,8 +7,6 @@ import "../src/Borrowing.sol";
 import "./Mocks/MockERC20.sol";
 import "./Mocks/MockPriceFeed.sol";
 
-error AccessControlUnauthorizedAccount(address account, bytes32 needed);
-
 contract BorrowingFactoryTest is Test {
     BorrowingFactory factory;
     MockERC20 collateralToken;
@@ -39,6 +37,24 @@ contract BorrowingFactoryTest is Test {
 
         // Grant the GOVERNOR_ROLE to the test contract
         factory.grantRole(factory.GOVERNOR_ROLE(), governor);
+    }
+
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
+        bytes memory buffer = new bytes(2 * length + 2);
+        buffer[0] = "0";
+        buffer[1] = "x";
+        for (uint256 i = 2 * length + 1; i > 1; --i) {
+            buffer[i] = bytes1(uint8(48 + (value % 16)));
+            if (uint8(buffer[i]) > 57) {
+                buffer[i] = bytes1(uint8(buffer[i]) + 39);
+            }
+            value /= 16;
+        }
+        require(value == 0, "Hex length insufficient");
+        return string(buffer);
     }
 
     function testCreateBorrowing() public {
@@ -102,8 +118,14 @@ contract BorrowingFactoryTest is Test {
 
         // Expect revert when non-governor tries to create a Borrowing instance
         vm.expectRevert(
-            abi.encodeWithSelector(AccessControlUnauthorizedAccount.selector, nonGovernor, factory.GOVERNOR_ROLE())
+            abi.encodePacked(
+                "AccessControl: account ",
+                toHexString(uint256(uint160(nonGovernor)), 20),
+                " is missing role ",
+                toHexString(uint256(factory.GOVERNOR_ROLE()), 32)
+            )
         );
+
         factory.createBorrowing(
             address(collateralToken),
             address(borrowToken),
