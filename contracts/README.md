@@ -1,8 +1,8 @@
-# GoldToken ETF Bridge Contract
+# Lending and Borrowing Protocol Contract
 
-This contract allow users to have gold tokens on the Ethereum network that are backed by physical gold. The gold is stored in a vault and the tokens are minted when the gold is deposited and burned when the gold is withdrawn.
-User can also bridge their gold tokens to the Binance Smart Chain network thanks to Chainlink CCIP technologies.
-When the contract has recolted enough fees from the minting and burning of the tokens, the contract allow users to participate in a lottery to win a part of the fees in GoldToken.
+This contract allows users to deposit collateral and borrow tokens on the Ethereum network. Users can deposit supported ERC20 tokens as collateral and borrow other tokens based on the value of their collateral. The protocol enforces collateralization ratios to ensure loans are secure and liquidations occur when necessary.
+Users can also repay their loans to reclaim their collateral or face liquidation if their collateral value falls below the required threshold.
+The contract collects fees from borrowing and repaying activities, which can be used to incentivize liquidity providers or fund protocol operations.
 
 ## Quick Start
 
