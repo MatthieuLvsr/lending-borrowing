@@ -27,21 +27,14 @@ contract LendingPoolTest is Test {
         depositToken = new DepositToken("Deposit Mock Token", "dMOCK");
 
         // Deploy the LendingPool contract
-        pool = new LendingPool(
-            address(mockToken),
-            address(depositToken),
-            interestRatePerSecond
-        );
+        pool = new LendingPool(address(mockToken), address(depositToken), interestRatePerSecond);
         depositToken.grantRole(depositToken.LENDING_ROLE(), address(pool));
 
         // Set the test contract as the owner of the deposit token
         // vm.prank(owner);
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";

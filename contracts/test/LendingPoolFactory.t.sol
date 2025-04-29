@@ -32,16 +32,10 @@ contract LendingPoolFactoryTest is Test {
 
         // Grant the GOVERNOR_ROLE to the test contract
         factory.grantRole(factory.GOVERNOR_ROLE(), governor);
-        depositTokenFactory.grantRole(
-            depositTokenFactory.GOVERNOR_ROLE(),
-            address(factory)
-        );
+        depositTokenFactory.grantRole(depositTokenFactory.GOVERNOR_ROLE(), address(factory));
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -60,10 +54,7 @@ contract LendingPoolFactoryTest is Test {
         vm.startPrank(governor);
 
         // Create LendingPool
-        string memory tokenId = factory.createLendingPool(
-            address(mockToken),
-            interestRatePerSecond
-        );
+        string memory tokenId = factory.createLendingPool(address(mockToken), interestRatePerSecond);
 
         // Check that the token ID is correct
         assertEq(tokenId, "MOCK");

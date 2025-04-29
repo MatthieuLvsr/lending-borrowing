@@ -23,10 +23,7 @@ contract DepositTokenFactoryTest is Test {
         mockToken = new MockERC20("Mock Token", "MOCK");
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -51,10 +48,7 @@ contract DepositTokenFactoryTest is Test {
         assertEq(address(existing), address(0));
 
         // Create a new DepositToken
-        string memory returnedId = factory.createDepositToken(
-            address(mockToken),
-            liquidityPool
-        );
+        string memory returnedId = factory.createDepositToken(address(mockToken), liquidityPool);
 
         // Check if the returned ID is correct
         assertEq(returnedId, "MOCK");

@@ -22,10 +22,7 @@ contract DepositTokenTest is Test {
         depositToken.grantRole(depositToken.LENDING_ROLE(), lendingContract);
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";

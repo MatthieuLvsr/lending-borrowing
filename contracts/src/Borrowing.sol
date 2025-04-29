@@ -58,10 +58,7 @@ contract Borrowing is ProtocolAccessControl {
 
     /// @notice Event emitted when a loan is liquidated.
     event Liquidated(
-        address indexed liquidator,
-        address indexed borrower,
-        uint256 repayAmount,
-        uint256 collateralSeized
+        address indexed liquidator, address indexed borrower, uint256 repayAmount, uint256 collateralSeized
     );
 
     /**
@@ -100,10 +97,8 @@ contract Borrowing is ProtocolAccessControl {
      * @param priceFeed The Chainlink aggregator contract.
      * @return Latest price with the feed's defined precision.
      */
-    function getLatestPrice(
-        AggregatorV3Interface priceFeed
-    ) public view returns (uint256) {
-        (, int256 price, , , ) = priceFeed.latestRoundData();
+    function getLatestPrice(AggregatorV3Interface priceFeed) public view returns (uint256) {
+        (, int256 price,,,) = priceFeed.latestRoundData();
         require(price > 0, "Invalid price");
         return uint256(price);
     }
@@ -117,9 +112,7 @@ contract Borrowing is ProtocolAccessControl {
         if (loan.borrowedAmount > 0) {
             uint256 timeElapsed = block.timestamp - loan.lastAccrued;
             if (timeElapsed > 0) {
-                uint256 interest = (loan.borrowedAmount *
-                    interestRatePerSecond *
-                    timeElapsed) / 1e18;
+                uint256 interest = (loan.borrowedAmount * interestRatePerSecond * timeElapsed) / 1e18;
                 loan.borrowedAmount += interest;
                 loan.lastAccrued = block.timestamp;
             }
@@ -134,10 +127,7 @@ contract Borrowing is ProtocolAccessControl {
      */
     function depositCollateral(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
-        require(
-            collateralToken.transferFrom(msg.sender, address(this), amount),
-            "Collateral transfer failed"
-        );
+        require(collateralToken.transferFrom(msg.sender, address(this), amount), "Collateral transfer failed");
         _accrueInterest(msg.sender);
         loans[msg.sender].collateralAmount += amount;
         emit CollateralDeposited(msg.sender, amount);
@@ -152,20 +142,13 @@ contract Borrowing is ProtocolAccessControl {
         _accrueInterest(msg.sender);
         Loan storage loan = loans[msg.sender];
 
-        uint256 collateralValue = (loan.collateralAmount *
-            getLatestPrice(collateralPriceFeed)) / 1e18;
+        uint256 collateralValue = (loan.collateralAmount * getLatestPrice(collateralPriceFeed)) / 1e18;
         uint256 maxBorrowable = (collateralValue * maxBorrowPercentage) / 100;
-        require(
-            loan.borrowedAmount + amount <= maxBorrowable,
-            "Insufficient collateral"
-        );
+        require(loan.borrowedAmount + amount <= maxBorrowable, "Insufficient collateral");
 
         loan.borrowedAmount += amount;
         loan.lastAccrued = block.timestamp;
-        require(
-            borrowToken.transfer(msg.sender, amount),
-            "Borrow transfer failed"
-        );
+        require(borrowToken.transfer(msg.sender, amount), "Borrow transfer failed");
         emit Borrowed(msg.sender, amount);
     }
 
@@ -178,14 +161,9 @@ contract Borrowing is ProtocolAccessControl {
         _accrueInterest(msg.sender);
         Loan storage loan = loans[msg.sender];
         require(loan.borrowedAmount > 0, "No active loan");
-        require(
-            borrowToken.transferFrom(msg.sender, address(this), amount),
-            "Repayment transfer failed"
-        );
+        require(borrowToken.transferFrom(msg.sender, address(this), amount), "Repayment transfer failed");
 
-        loan.borrowedAmount = amount >= loan.borrowedAmount
-            ? 0
-            : loan.borrowedAmount - amount;
+        loan.borrowedAmount = amount >= loan.borrowedAmount ? 0 : loan.borrowedAmount - amount;
         loan.lastAccrued = block.timestamp;
         emit Repaid(msg.sender, amount);
     }
@@ -197,35 +175,26 @@ contract Borrowing is ProtocolAccessControl {
      * @param borrower Address of the borrower to be liquidated.
      * @param repayAmount Amount (in borrow tokens) the liquidator intends to repay.
      */
-    function liquidateLoan(
-        address borrower,
-        uint256 repayAmount
-    ) external onlyRole(LIQUIDATOR_ROLE) {
+    function liquidateLoan(address borrower, uint256 repayAmount) external onlyRole(LIQUIDATOR_ROLE) {
         require(repayAmount > 0, "Repayment amount must be greater than zero");
         _accrueInterest(borrower);
         Loan storage loan = loans[borrower];
         require(loan.borrowedAmount > 0, "No active loan");
 
         // Compute the collateral to seize using the current formula.
-        uint256 computedCollateralToSeize = (repayAmount *
-            (10000 + liquidationIncentive)) / 10000;
+        uint256 computedCollateralToSeize = (repayAmount * (10000 + liquidationIncentive)) / 10000;
         uint256 collateralToSeize;
         // Si le montant calculé est supérieur au collatéral disponible, procéder à une liquidation complète.
         if (computedCollateralToSeize > loan.collateralAmount) {
             collateralToSeize = loan.collateralAmount;
             // Ajuster le repayAmount pour correspondre à la totalité du collatéral.
-            repayAmount =
-                (collateralToSeize * 10000) /
-                (10000 + liquidationIncentive);
+            repayAmount = (collateralToSeize * 10000) / (10000 + liquidationIncentive);
         } else {
             collateralToSeize = computedCollateralToSeize;
         }
 
         // Transférer le montant de remboursement depuis le liquidateur vers le contrat.
-        require(
-            borrowToken.transferFrom(msg.sender, address(this), repayAmount),
-            "Repayment transfer failed"
-        );
+        require(borrowToken.transferFrom(msg.sender, address(this), repayAmount), "Repayment transfer failed");
 
         // Mettre à jour la position de l'emprunteur.
         if (repayAmount >= loan.borrowedAmount) {
@@ -236,10 +205,7 @@ contract Borrowing is ProtocolAccessControl {
         loan.collateralAmount -= collateralToSeize;
 
         // Transférer le collatéral saisi au liquidateur.
-        require(
-            collateralToken.transfer(msg.sender, collateralToSeize),
-            "Collateral transfer failed"
-        );
+        require(collateralToken.transfer(msg.sender, collateralToSeize), "Collateral transfer failed");
 
         emit Liquidated(msg.sender, borrower, repayAmount, collateralToSeize);
     }
@@ -248,9 +214,7 @@ contract Borrowing is ProtocolAccessControl {
      * @notice Triggers interest accrual for the caller.
      * @dev This function calls the internal _accrueInterest function.
      */
-    function triggerAccrual(
-        address _borrower
-    ) external onlyRole(GOVERNOR_ROLE) {
+    function triggerAccrual(address _borrower) external onlyRole(GOVERNOR_ROLE) {
         _accrueInterest(_borrower);
     }
 }
