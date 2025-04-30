@@ -20,14 +20,12 @@ export function Navbar() {
 					</Link>
 				</nav>
 				<div className="flex gap-4">
-  				<Button asChild>
-    				<Link href="/dashboard">
-    						Launch Dapp
-    				</Link>
-  				</Button>
-   			  <ModeToggle />
+					<Button asChild>
+						<Link href="/app">Launch Dapp</Link>
+					</Button>
+					<ModeToggle />
 				</div>
-  		</div>
+			</div>
 		</header>
 	);
 }
