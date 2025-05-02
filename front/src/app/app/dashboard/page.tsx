@@ -111,7 +111,7 @@ export default function DashboardPage() {
 	];
 
 	return (
-		<main className="flex-1 py-10 md:px-24 flex justify-center items-center">
+		<div>
 			{!isConnected && (
 				<div className="flex flex-col items-center justify-center h-full gap-4 py-20">
 					<Wallet className="h-16 w-16 text-muted-foreground" />
@@ -385,6 +385,6 @@ export default function DashboardPage() {
 					maxAmount={transactionModal.maxAmount}
 				/>
 			)}
-		</main>
+		</div>
 	);
 }
