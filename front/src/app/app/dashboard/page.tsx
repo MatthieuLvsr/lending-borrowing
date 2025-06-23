@@ -1,5 +1,14 @@
 "use client";
 
+import { useAppKitAccount } from "@reown/appkit/react";
+import {
+	AlertTriangle,
+	ArrowUpDown,
+	DollarSign,
+	TrendingUp,
+	Wallet,
+} from "lucide-react";
+import { useState } from "react";
 import { CollateralRatioIndicator } from "@/components/collateral-ratio-indicator";
 import { InterestRatesChart } from "@/components/interest-rates-chart";
 import { StatsCard } from "@/components/landing-page/stat-section";
@@ -12,15 +21,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WalletConnect } from "@/components/wallet-connect";
 import { useBalance } from "@/hooks/use-balance";
-import { useAppKitAccount } from "@reown/appkit/react";
-import {
-	AlertTriangle,
-	ArrowUpDown,
-	DollarSign,
-	TrendingUp,
-	Wallet,
-} from "lucide-react";
-import { useState } from "react";
 
 const accountData: AccountData = {
 	totalCollateralETH: "15.0", // User has 15 ETH as collateral
