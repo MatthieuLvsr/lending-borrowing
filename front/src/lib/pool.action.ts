@@ -1,4 +1,6 @@
 import { readContract } from "@wagmi/core";
+import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
 import { lendingPoolAbi, lendingPoolFactoryAbi } from "@/generated";
 import { config } from "./wallet";
 
@@ -23,23 +25,20 @@ export const getPoolInformation = async (asset: string) => {
 	};
 };
 
-import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
-
 export const publicClient = createPublicClient({
 	chain: sepolia,
 	transport: http(),
 });
 
 export const getPools = async () => {
-	// const blockNumber = await publicClient.getBlockNumber();
+	const blockNumber = await publicClient.getBlockNumber();
 	const logs = await publicClient.getContractEvents({
 		address: process.env
 			.NEXT_PUBLIC_LENDING_POOL_FACTORY_CONTRACT_ADDRESS as `0x${string}`,
 		abi: lendingPoolFactoryAbi,
 		eventName: "LendingPoolCreated",
-		fromBlock: BigInt(8226750),
-		toBlock: BigInt(8226750 + 100),
+		fromBlock: blockNumber - BigInt(9999),
+		toBlock: blockNumber,
 	});
 	return logs.map((log) => {
 		if (

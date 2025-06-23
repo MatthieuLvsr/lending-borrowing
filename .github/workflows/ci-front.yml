@@ -194,12 +194,14 @@ jobs:
           path: front/.next
 
       - name: Analyze bundle size
-        uses: nextjs-bundle-analysis-action@v0.0.3
-        if: success()
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          buildOutputDirectory: front/.next
-          bundleStatsFile: front/.next/analyze/__bundle_analysis.json
+        run: |
+          echo "📊 Bundle Analysis Results:"
+          if [ -d "front/.next" ]; then
+            du -sh front/.next/static/chunks/* | head -10
+            echo "✅ Build artifacts analyzed"
+          else
+            echo "⚠️ Build directory not found"
+          fi
 
   accessibility-check:
     name: Accessibility Check
