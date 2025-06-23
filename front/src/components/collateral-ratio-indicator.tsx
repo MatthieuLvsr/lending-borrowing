@@ -75,11 +75,13 @@ export function CollateralRatioIndicator({
 			</div>
 
 			<div className="relative pt-1">
-				<Progress
-					value={percentage}
-					className="h-2"
-					indicatorClassName={getProgressColor()}
-				/>
+				<div className="relative">
+					<Progress value={percentage} className="h-2" />
+					<div
+						className={`absolute top-0 left-0 h-2 rounded-full transition-all ${getProgressColor()}`}
+						style={{ width: `${percentage}%` }}
+					/>
+				</div>
 
 				{/* Marqueur pour le ratio de liquidation */}
 				<div
@@ -128,8 +130,8 @@ export function CollateralRatioIndicator({
 
 			{healthStatus === "warning" && (
 				<Alert
-					variant="warning"
-					className="mt-2 border-yellow-500 text-yellow-700"
+					variant="default"
+					className="mt-2 border-yellow-500 text-yellow-700 bg-yellow-50"
 				>
 					<AlertTriangle className="h-4 w-4" />
 					<AlertDescription>
