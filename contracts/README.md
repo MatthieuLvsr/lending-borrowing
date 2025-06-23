@@ -62,8 +62,8 @@ forge test -vv
 
 ### Check Coverage
 ```bash
-forge coverage
-forge coverage --report debug > report.log
+forge coverage --ir-minimum
+forge coverage --report debug > report.log --ir-minimum
 ```
 
 ### Deploy Contracts

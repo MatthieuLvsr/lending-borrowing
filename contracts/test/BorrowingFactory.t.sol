@@ -41,10 +41,16 @@ contract BorrowingFactoryTest is Test {
         factory = new BorrowingFactory(address(protocolAccessControl));
 
         // Grant the GOVERNOR_ROLE to the test contract
-        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), governor);
+        protocolAccessControl.grantRole(
+            protocolAccessControl.GOVERNOR_ROLE(),
+            governor
+        );
     }
 
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -78,8 +84,8 @@ contract BorrowingFactoryTest is Test {
         assertEq(id, "COLL-BORR");
 
         // Check that Borrowing contract has been created
-        Borrowing borrowing = factory.getBorrowing("COLL-BORR");
-        assertTrue(address(borrowing) != address(0));
+        address borrowingAddress = factory.getBorrowing("COLL-BORR");
+        assertTrue(borrowingAddress != address(0));
 
         vm.stopPrank();
     }
@@ -131,6 +137,172 @@ contract BorrowingFactoryTest is Test {
             liquidationThreshold,
             liquidationIncentive
         );
+
+        vm.stopPrank();
+    }
+
+    function testGetBorrowingsPaginated() public {
+        vm.startPrank(governor);
+
+        // Create multiple borrowing contracts
+        MockERC20 token1 = new MockERC20("Token1", "TOK1");
+        MockERC20 token2 = new MockERC20("Token2", "TOK2");
+        MockERC20 token3 = new MockERC20("Token3", "TOK3");
+
+        factory.createBorrowing(
+            address(token1),
+            address(borrowToken),
+            address(collateralPriceFeed),
+            address(borrowPriceFeed),
+            interestRatePerSecond,
+            maxBorrowPercentage,
+            liquidationThreshold,
+            liquidationIncentive
+        );
+
+        factory.createBorrowing(
+            address(token2),
+            address(borrowToken),
+            address(collateralPriceFeed),
+            address(borrowPriceFeed),
+            interestRatePerSecond,
+            maxBorrowPercentage,
+            liquidationThreshold,
+            liquidationIncentive
+        );
+
+        factory.createBorrowing(
+            address(token3),
+            address(borrowToken),
+            address(collateralPriceFeed),
+            address(borrowPriceFeed),
+            interestRatePerSecond,
+            maxBorrowPercentage,
+            liquidationThreshold,
+            liquidationIncentive
+        );
+
+        // Test pagination
+        (
+            BorrowingFactory.BorrowingInfo[] memory result,
+            uint256 total
+        ) = factory.getBorrowingsPaginated(0, 2);
+
+        assertEq(total, 3);
+        assertEq(result.length, 2);
+        assertEq(result[0].id, "TOK1-BORR");
+        assertEq(result[1].id, "TOK2-BORR");
+
+        // Test second page
+        (result, total) = factory.getBorrowingsPaginated(2, 2);
+        assertEq(total, 3);
+        assertEq(result.length, 1);
+        assertEq(result[0].id, "TOK3-BORR");
+
+        vm.stopPrank();
+    }
+
+    function testGetBorrowingsPaginatedWithLimit100() public {
+        vm.startPrank(governor);
+
+        // Test that limit of 100 is accepted
+        (
+            BorrowingFactory.BorrowingInfo[] memory result,
+            uint256 total
+        ) = factory.getBorrowingsPaginated(0, 100);
+        assertEq(total, 0);
+        assertEq(result.length, 0);
+
+        // Test that limit > 100 is rejected
+        vm.expectRevert("Limit exceeds maximum of 100");
+        factory.getBorrowingsPaginated(0, 101);
+
+        vm.stopPrank();
+    }
+
+    function testGetBorrowingsPaginatedInvalidParameters() public {
+        vm.startPrank(governor);
+
+        // Test limit = 0
+        vm.expectRevert("Limit must be greater than 0");
+        factory.getBorrowingsPaginated(0, 0);
+
+        vm.stopPrank();
+    }
+
+    function testGetBorrowingsCount() public {
+        vm.startPrank(governor);
+
+        // Initially should be 0
+        assertEq(factory.getBorrowingsCount(), 0);
+
+        // Create one borrowing
+        factory.createBorrowing(
+            address(collateralToken),
+            address(borrowToken),
+            address(collateralPriceFeed),
+            address(borrowPriceFeed),
+            interestRatePerSecond,
+            maxBorrowPercentage,
+            liquidationThreshold,
+            liquidationIncentive
+        );
+
+        // Should be 1 now
+        assertEq(factory.getBorrowingsCount(), 1);
+
+        vm.stopPrank();
+    }
+
+    function testGetBorrowingByIndex() public {
+        vm.startPrank(governor);
+
+        // Create borrowing
+        factory.createBorrowing(
+            address(collateralToken),
+            address(borrowToken),
+            address(collateralPriceFeed),
+            address(borrowPriceFeed),
+            interestRatePerSecond,
+            maxBorrowPercentage,
+            liquidationThreshold,
+            liquidationIncentive
+        );
+
+        // Get by index
+        BorrowingFactory.BorrowingInfo memory info = factory
+            .getBorrowingByIndex(0);
+        assertEq(info.id, "COLL-BORR");
+        assertEq(info.collateralToken, address(collateralToken));
+        assertEq(info.borrowToken, address(borrowToken));
+
+        // Test out of bounds
+        vm.expectRevert("Index out of bounds");
+        factory.getBorrowingByIndex(1);
+
+        vm.stopPrank();
+    }
+
+    function testBorrowingExistsById() public {
+        vm.startPrank(governor);
+
+        // Should not exist initially
+        assertFalse(factory.borrowingExistsById("COLL-BORR"));
+
+        // Create borrowing
+        factory.createBorrowing(
+            address(collateralToken),
+            address(borrowToken),
+            address(collateralPriceFeed),
+            address(borrowPriceFeed),
+            interestRatePerSecond,
+            maxBorrowPercentage,
+            liquidationThreshold,
+            liquidationIncentive
+        );
+
+        // Should exist now
+        assertTrue(factory.borrowingExistsById("COLL-BORR"));
 
         vm.stopPrank();
     }

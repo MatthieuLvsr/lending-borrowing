@@ -12,8 +12,21 @@ import "./ProtocolAccessControl.sol";
  *         and the borrowed token symbol (e.g., "ETH-DAI").
  */
 contract BorrowingFactory {
-    /// @notice Mapping that associates an identifier with its corresponding `Borrowing` contract instance.
-    mapping(string => Borrowing) public borrowings;
+    struct BorrowingInfo {
+        string id;
+        address borrowingAddress;
+        address collateralToken;
+        address borrowToken;
+    }
+
+    /// @notice Array that stores all borrowing contract information.
+    BorrowingInfo[] public borrowings;
+
+    /// @notice Mapping for quick ID lookup to array index.
+    mapping(string => uint256) private borrowingIdToIndex;
+
+    /// @notice Mapping to track if an ID exists (needed because index 0 is valid).
+    mapping(string => bool) private borrowingExists;
 
     /// @notice Reference to the shared protocol access control contract.
     ProtocolAccessControl public protocolAccessControl;
@@ -23,8 +36,13 @@ contract BorrowingFactory {
     /// @param collateralToken Address of the ERC20 token used as collateral.
     /// @param borrowToken Address of the ERC20 token that will be borrowed.
     /// @param id Unique identifier for the borrowing pair (e.g., "ETH-DAI").
+    /// @param index Index in the borrowings array.
     event BorrowingCreated(
-        address indexed borrowingAddress, address indexed collateralToken, address indexed borrowToken, string id
+        address indexed borrowingAddress,
+        address indexed collateralToken,
+        address indexed borrowToken,
+        string id,
+        uint256 index
     );
 
     constructor(address _protocolAccessControl) {
@@ -36,7 +54,10 @@ contract BorrowingFactory {
      * @param role The role to check.
      */
     modifier onlyRole(bytes32 role) {
-        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
+        require(
+            protocolAccessControl.hasRole(role, msg.sender),
+            "AccessControl: caller does not have required role"
+        );
         _;
     }
 
@@ -63,14 +84,19 @@ contract BorrowingFactory {
         uint256 _maxBorrowPercentage,
         uint256 _liquidationThreshold,
         uint256 _liquidationIncentive
-    ) external onlyRole(protocolAccessControl.GOVERNOR_ROLE()) returns (string memory id) {
+    )
+        external
+        onlyRole(protocolAccessControl.GOVERNOR_ROLE())
+        returns (string memory id)
+    {
         // Retrieve token symbols for identifier generation
-        string memory collateralSymbol = IERC20Metadata(_collateralToken).symbol();
+        string memory collateralSymbol = IERC20Metadata(_collateralToken)
+            .symbol();
         string memory borrowSymbol = IERC20Metadata(_borrowToken).symbol();
 
         // Generate a unique identifier from token symbols (e.g., "ETH-DAI")
         id = string(abi.encodePacked(collateralSymbol, "-", borrowSymbol));
-        require(address(borrowings[id]) == address(0), "Borrowing already exists");
+        require(!borrowingExists[id], "Borrowing already exists");
 
         // Deploy `Borrowing` contract with specified parameters
         Borrowing borrowing = new Borrowing(
@@ -84,19 +110,102 @@ contract BorrowingFactory {
             _liquidationIncentive,
             address(protocolAccessControl)
         );
-        borrowings[id] = borrowing;
 
-        emit BorrowingCreated(address(borrowing), _collateralToken, _borrowToken, id);
+        // Store borrowing information
+        uint256 index = borrowings.length;
+        borrowings.push(
+            BorrowingInfo({
+                id: id,
+                borrowingAddress: address(borrowing),
+                collateralToken: _collateralToken,
+                borrowToken: _borrowToken
+            })
+        );
+        borrowingIdToIndex[id] = index;
+        borrowingExists[id] = true;
+
+        emit BorrowingCreated(
+            address(borrowing),
+            _collateralToken,
+            _borrowToken,
+            id,
+            index
+        );
 
         return id;
     }
 
     /**
-     * @notice Returns the `Borrowing` contract instance associated with the given identifier.
+     * @notice Returns the `Borrowing` contract address associated with the given identifier.
      * @param id Unique identifier derived from the collateral and borrowed token symbols (e.g., "ETH-DAI").
-     * @return The `Borrowing` contract instance.
+     * @return The `Borrowing` contract address.
      */
-    function getBorrowing(string memory id) external view returns (Borrowing) {
-        return borrowings[id];
+    function getBorrowing(string memory id) external view returns (address) {
+        require(borrowingExists[id], "Borrowing not found");
+        uint256 index = borrowingIdToIndex[id];
+        return borrowings[index].borrowingAddress;
+    }
+
+    /**
+     * @notice Returns paginated borrowing information.
+     * @param offset Starting index for pagination.
+     * @param limit Maximum number of items to return (max 50).
+     * @return result Array of BorrowingInfo structs.
+     * @return total Total number of borrowings.
+     */
+    function getBorrowingsPaginated(
+        uint256 offset,
+        uint256 limit
+    ) external view returns (BorrowingInfo[] memory result, uint256 total) {
+        require(limit <= 100, "Limit exceeds maximum of 100");
+        require(limit > 0, "Limit must be greater than 0");
+
+        total = borrowings.length;
+        if (offset >= total) {
+            return (new BorrowingInfo[](0), total);
+        }
+
+        uint256 end = offset + limit;
+        if (end > total) {
+            end = total;
+        }
+
+        result = new BorrowingInfo[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            result[i - offset] = borrowings[i];
+        }
+
+        return (result, total);
+    }
+
+    /**
+     * @notice Returns the total number of borrowing contracts.
+     * @return The total count of borrowings.
+     */
+    function getBorrowingsCount() external view returns (uint256) {
+        return borrowings.length;
+    }
+
+    /**
+     * @notice Returns borrowing information by index.
+     * @param index Index in the borrowings array.
+     * @return BorrowingInfo struct at the specified index.
+     */
+    function getBorrowingByIndex(
+        uint256 index
+    ) external view returns (BorrowingInfo memory) {
+        require(index < borrowings.length, "Index out of bounds");
+        return borrowings[index];
+    }
+
+    /**
+     * @notice Checks if a borrowing with the given ID exists.
+     * @param id Unique identifier to check.
+     * @return True if borrowing exists, false otherwise.
+     */
+    function borrowingExistsById(
+        string memory id
+    ) external view returns (bool) {
+        return borrowingExists[id];
     }
 }
