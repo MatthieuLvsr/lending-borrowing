@@ -2,6 +2,11 @@ name: CI - Solidity Smart Contracts
 
 on:
   pull_request:
+  push:
+    branches: [main, dev]
+    paths:
+      - "front/**"
+      - ".github/workflows/ci-front.yml"
 
 jobs:
   ci:

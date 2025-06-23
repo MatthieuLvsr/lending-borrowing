@@ -12,7 +12,8 @@ export function useBalance() {
 		if (address) {
 			getBalance(config, { address: address as `0x${string}` }).then(
 				(balance) => {
-					setBalance(formatEther(balance.value, "gwei"));
+					const formattedBalance = Number(formatEther(balance.value, "wei"));
+					setBalance(formattedBalance.toFixed(2));
 				},
 			);
 		}
