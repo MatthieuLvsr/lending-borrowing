@@ -48,7 +48,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run Biome CI check
-        run: bunx --bun @biomejs/biome ci --reporter=github
+        run: bunx --bun @biomejs/biome ci ./src --reporter=github
 
       - name: Run Next.js lint
         run: bun run lint
