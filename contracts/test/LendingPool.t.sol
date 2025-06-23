@@ -4,6 +4,7 @@ pragma solidity ^0.8.18;
 import "forge-std/Test.sol";
 import "../src/LendingPool.sol";
 import "../src/DepositToken.sol";
+import "../src/ProtocolAccessControl.sol";
 
 import "./Mocks/MockERC20.sol";
 
@@ -11,6 +12,7 @@ contract LendingPoolTest is Test {
     LendingPool pool;
     MockERC20 mockToken;
     DepositToken depositToken;
+    ProtocolAccessControl protocolAccessControl;
     address owner;
     address user;
     uint256 interestRatePerSecond = 1e16; // 1% per second (for testing)
@@ -20,18 +22,25 @@ contract LendingPoolTest is Test {
         owner = address(this);
         user = address(0x123);
 
+        // Deploy shared protocol access control
+        protocolAccessControl = new ProtocolAccessControl();
+
         // Deploy a mock ERC20 token
         mockToken = new MockERC20("Mock Token", "MOCK");
 
         // Deploy a mock DepositToken
-        depositToken = new DepositToken("Deposit Mock Token", "dMOCK");
+        depositToken = new DepositToken("Deposit Mock Token", "dMOCK", address(protocolAccessControl));
 
         // Deploy the LendingPool contract
-        pool = new LendingPool(address(mockToken), address(depositToken), interestRatePerSecond);
-        depositToken.grantRole(depositToken.LENDING_ROLE(), address(pool));
+        pool = new LendingPool(
+            address(mockToken), address(depositToken), interestRatePerSecond, address(protocolAccessControl)
+        );
 
-        // Set the test contract as the owner of the deposit token
-        // vm.prank(owner);
+        // Grant the LENDING_ROLE to the pool in the shared access control
+        protocolAccessControl.grantRole(protocolAccessControl.LENDING_ROLE(), address(pool));
+
+        // Grant the GOVERNOR_ROLE to the test contract
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), owner);
     }
 
     function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
@@ -141,14 +150,7 @@ contract LendingPoolTest is Test {
         vm.startPrank(attacker);
 
         // Expect revert when non-owner tries to modify interest rate
-        vm.expectRevert(
-            abi.encodePacked(
-                "AccessControl: account ",
-                toHexString(uint256(uint160(attacker)), 20),
-                " is missing role ",
-                toHexString(uint256(depositToken.GOVERNOR_ROLE()), 32)
-            )
-        );
+        vm.expectRevert("AccessControl: caller does not have required role");
         pool.setInterestRate(newInterestRatePerSecond);
 
         vm.stopPrank();

@@ -1,3 +1,4 @@
+import { Search } from "lucide-react";
 import { MarketTable } from "@/components/market-table";
 import {
 	Card,
@@ -8,15 +9,16 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search } from "lucide-react";
+import { getPools } from "@/lib/pool.action";
 
-export default function MarketsPage() {
+export default async function MarketsPage() {
+	const pools = await getPools();
 	return (
 		<div className="flex flex-col gap-8">
 			<div className="flex flex-col gap-2">
 				<h1 className="text-3xl font-bold">Marchés</h1>
 				<p className="text-muted-foreground">
-					Explorez les actifs disponibles pour le prêt et l emprunt
+					Explorez les actifs disponibles pour le prêt et l&apos;emprunt
 				</p>
 			</div>
 
@@ -24,16 +26,16 @@ export default function MarketsPage() {
 				<CardHeader>
 					<div className="flex flex-col md:flex-row justify-between gap-4">
 						<div>
-							<CardTitle>Tous les Marchés</CardTitle>
+							<CardTitle>Market</CardTitle>
 							<CardDescription>
-								Consultez les taux et les liquidités de tous les actifs
+								View the rates and liquidity of all assets
 							</CardDescription>
 						</div>
 						<div className="relative w-full md:w-64">
 							<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
 								type="search"
-								placeholder="Rechercher un actif..."
+								placeholder="Search for an asset..."
 								className="w-full pl-8"
 							/>
 						</div>
@@ -42,23 +44,23 @@ export default function MarketsPage() {
 				<CardContent>
 					<Tabs defaultValue="all" className="w-full">
 						<TabsList className="grid w-full grid-cols-4 mb-8">
-							<TabsTrigger value="all">Tous</TabsTrigger>
-							<TabsTrigger value="stablecoins">Stablecoins</TabsTrigger>
+							<TabsTrigger value="all">Ethereum</TabsTrigger>
+							{/* <TabsTrigger value="stablecoins">Stablecoins</TabsTrigger>
 							<TabsTrigger value="ethereum">Ethereum</TabsTrigger>
-							<TabsTrigger value="other">Autres</TabsTrigger>
+							<TabsTrigger value="other">Autres</TabsTrigger> */}
 						</TabsList>
 						<TabsContent value="all">
-							<MarketTable />
+							<MarketTable pools={pools} />
 						</TabsContent>
-						<TabsContent value="stablecoins">
-							<MarketTable filter="stablecoins" />
+						{/* <TabsContent value="stablecoins">
+							<MarketTable filter="stablecoins" pools={pools} />
 						</TabsContent>
 						<TabsContent value="ethereum">
-							<MarketTable filter="ethereum" />
+							<MarketTable filter="ethereum" pools={pools} />
 						</TabsContent>
 						<TabsContent value="other">
-							<MarketTable filter="other" />
-						</TabsContent>
+							<MarketTable filter="other" pools={pools} />
+						</TabsContent> */}
 					</Tabs>
 				</CardContent>
 			</Card>

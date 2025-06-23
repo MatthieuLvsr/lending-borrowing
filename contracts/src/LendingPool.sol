@@ -14,7 +14,7 @@ import "./ProtocolAccessControl.sol";
  *         The value of `DepositToken` changes over time due to interest accrual via `exchangeRate`.
  * @dev The `DepositToken` contract is specified at deployment via the constructor.
  */
-contract LendingPool is ProtocolAccessControl {
+contract LendingPool {
     /// @notice Token representing user shares in the pool.
     DepositToken public depositToken;
 
@@ -31,6 +31,9 @@ contract LendingPool is ProtocolAccessControl {
     /// @notice Interest rate applied per second, scaled to 1e18 precision.
     uint256 public interestRatePerSecond;
 
+    /// @notice Reference to the shared protocol access control contract.
+    ProtocolAccessControl public protocolAccessControl;
+
     /// @notice Emitted when a user deposits underlying tokens into the pool.
     event Deposit(address indexed user, uint256 underlyingAmount, uint256 tokenAmount);
 
@@ -42,13 +45,29 @@ contract LendingPool is ProtocolAccessControl {
      * @param _underlyingToken Address of the underlying ERC20 token (e.g., DAI).
      * @param _depositToken Address of the associated `DepositToken`, deployed via `DepositTokenFactory`.
      * @param _interestRatePerSecond Interest rate applied per second, with 1e18 precision.
+     * @param _protocolAccessControl Address of the shared protocol access control contract.
      */
-    constructor(address _underlyingToken, address _depositToken, uint256 _interestRatePerSecond) {
+    constructor(
+        address _underlyingToken,
+        address _depositToken,
+        uint256 _interestRatePerSecond,
+        address _protocolAccessControl
+    ) {
         underlyingToken = IERC20(_underlyingToken);
         depositToken = DepositToken(_depositToken);
         interestRatePerSecond = _interestRatePerSecond;
         exchangeRate = 1e18; // Initially, 1 DepositToken = 1 underlying unit
         lastAccrualTimestamp = block.timestamp;
+        protocolAccessControl = ProtocolAccessControl(_protocolAccessControl);
+    }
+
+    /**
+     * @dev Modifier to check if the caller has the specified role.
+     * @param role The role to check.
+     */
+    modifier onlyRole(bytes32 role) {
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
+        _;
     }
 
     /**
@@ -106,7 +125,7 @@ contract LendingPool is ProtocolAccessControl {
         }
     }
 
-    function setInterestRate(uint256 _value) external onlyRole(GOVERNOR_ROLE) {
+    function setInterestRate(uint256 _value) external onlyRole(protocolAccessControl.GOVERNOR_ROLE()) {
         interestRatePerSecond = _value;
     }
 }

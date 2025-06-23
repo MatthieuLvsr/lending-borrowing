@@ -52,20 +52,26 @@ contract Deploy is Script {
         vm.startBroadcast();
         console.log("Wallet deployer address:", msg.sender);
 
+        // Deploy shared ProtocolAccessControl
+        protocolAccessControl = new ProtocolAccessControl();
+        console.log("ProtocolAccessControl deployed at:", address(protocolAccessControl));
+
         // Deploy DepositTokenFactory
-        depositTokenFactory = new DepositTokenFactory();
+        depositTokenFactory = new DepositTokenFactory(address(protocolAccessControl));
         console.log("DepositTokenFactory deployed at:", address(depositTokenFactory));
 
         // Deploy LendingPoolFactory
-        lendingPoolFactory = new LendingPoolFactory(address(depositTokenFactory));
+        lendingPoolFactory = new LendingPoolFactory(address(depositTokenFactory), address(protocolAccessControl));
         console.log("LendingPoolFactory deployed at:", address(lendingPoolFactory));
 
         // Deploy BorrowingFactory
-        borrowingFactory = new BorrowingFactory();
+        borrowingFactory = new BorrowingFactory(address(protocolAccessControl));
         console.log("BorrowingFactory deployed at:", address(borrowingFactory));
 
-        // Granting roles to the factory
-        depositTokenFactory.grantRole(depositTokenFactory.GOVERNOR_ROLE(), address(lendingPoolFactory));
+        // Granting roles to the factories
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), address(lendingPoolFactory));
+        protocolAccessControl.grantRole(protocolAccessControl.DEFAULT_ADMIN_ROLE(), address(lendingPoolFactory));
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), address(borrowingFactory));
 
         // Example: Create a LendingPool for the collateral token
         string memory lendingPoolId = lendingPoolFactory.createLendingPool(collateralToken, interestRatePerSecond);

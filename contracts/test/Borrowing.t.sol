@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import "forge-std/Test.sol";
 import "../src/Borrowing.sol";
+import "../src/ProtocolAccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "./Mocks/MockPriceFeed.sol";
@@ -10,6 +11,7 @@ import "./Mocks/MockERC20.sol";
 
 contract BorrowingTest is Test {
     Borrowing public borrowing;
+    ProtocolAccessControl public protocolAccessControl;
     MockERC20 public collateralToken;
     MockERC20 public borrowToken;
     MockPriceFeed public collateralPriceFeed;
@@ -25,6 +27,9 @@ contract BorrowingTest is Test {
     uint256 public liquidationIncentive = 500; // 5% bonus (en basis points)
 
     function setUp() public {
+        // Déployer le contrat d'accès partagé
+        protocolAccessControl = new ProtocolAccessControl();
+
         // Déployer les tokens mocks
         collateralToken = new MockERC20("Collateral Token", "COL");
         borrowToken = new MockERC20("Borrow Token", "BOR");
@@ -40,11 +45,12 @@ contract BorrowingTest is Test {
             interestRatePerSecond,
             maxBorrowPercentage,
             liquidationThreshold,
-            liquidationIncentive
+            liquidationIncentive,
+            address(protocolAccessControl)
         );
         // Accordez explicitement le rôle LIQUIDATOR_ROLE au liquidateur pour les tests de liquidation
-        borrowing.grantRole(borrowing.LIQUIDATOR_ROLE(), liquidator);
-        borrowing.grantRole(borrowing.GOVERNOR_ROLE(), governor);
+        protocolAccessControl.grantRole(protocolAccessControl.LIQUIDATOR_ROLE(), liquidator);
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), governor);
     }
 
     function testDepositCollateral() public {
@@ -421,14 +427,7 @@ contract BorrowingTest is Test {
         collateralPriceFeed.setPrice(5e17);
         address unauthorizedAddress = address(0x789);
         vm.startPrank(unauthorizedAddress);
-        vm.expectRevert(
-            abi.encodePacked(
-                "AccessControl: account ",
-                toHexString(uint256(uint160(unauthorizedAddress)), 20),
-                " is missing role ",
-                toHexString(uint256(borrowing.LIQUIDATOR_ROLE()), 32)
-            )
-        );
+        vm.expectRevert("AccessControl: caller does not have required role");
         borrowing.liquidateLoan(borrower, repayAmount);
         vm.stopPrank();
     }

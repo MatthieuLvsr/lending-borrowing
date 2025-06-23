@@ -9,11 +9,14 @@ import "./ProtocolAccessControl.sol";
  * @title DepositTokenFactory
  * @notice Factory contract for deploying `DepositToken` contracts, representing users' shares in a liquidity pool.
  *         The identifier for each `DepositToken` is derived from the underlying token's symbol.
- * @dev This contract is owned and only the owner can deploy new DepositTokens.
+ * @dev This contract uses a shared ProtocolAccessControl for access management.
  */
-contract DepositTokenFactory is ProtocolAccessControl {
+contract DepositTokenFactory {
     /// @notice Mapping that associates an identifier (e.g., "DAI") with its corresponding `DepositToken` contract instance.
     mapping(string => DepositToken) public depositTokens;
+
+    /// @notice Reference to the shared protocol access control contract.
+    ProtocolAccessControl public protocolAccessControl;
 
     /// @notice Event emitted when a new `DepositToken` is created.
     /// @param tokenAddress Address of the newly deployed `DepositToken` contract.
@@ -25,7 +28,18 @@ contract DepositTokenFactory is ProtocolAccessControl {
         address indexed tokenAddress, string name, string symbol, address indexed liquidityPool, string id
     );
 
-    constructor() {}
+    constructor(address _protocolAccessControl) {
+        protocolAccessControl = ProtocolAccessControl(_protocolAccessControl);
+    }
+
+    /**
+     * @dev Modifier to check if the caller has the specified role.
+     * @param role The role to check.
+     */
+    modifier onlyRole(bytes32 role) {
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
+        _;
+    }
 
     /**
      * @notice Deploys a new `DepositToken` contract for a given underlying ERC20 token.
@@ -37,7 +51,7 @@ contract DepositTokenFactory is ProtocolAccessControl {
      */
     function createDepositToken(address underlyingToken, address liquidityPool)
         external
-        onlyRole(GOVERNOR_ROLE)
+        onlyRole(protocolAccessControl.GOVERNOR_ROLE())
         returns (string memory id)
     {
         // Retrieve metadata (symbol and name) of the underlying ERC20 token
@@ -54,9 +68,8 @@ contract DepositTokenFactory is ProtocolAccessControl {
         string memory depositTokenSymbol = string(abi.encodePacked("d", tokenSymbol));
 
         // Deploy the `DepositToken` contract
-        DepositToken dt = new DepositToken(depositTokenName, depositTokenSymbol);
+        DepositToken dt = new DepositToken(depositTokenName, depositTokenSymbol, address(protocolAccessControl));
         depositTokens[id] = dt;
-        dt.grantRole(dt.DEFAULT_ADMIN_ROLE(), msg.sender);
 
         // Emit event after successful deployment
         emit DepositTokenCreated(address(dt), depositTokenName, depositTokenSymbol, liquidityPool, id);

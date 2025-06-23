@@ -11,7 +11,7 @@ import "./ProtocolAccessControl.sol";
  *         Users can deposit collateral, borrow funds, repay loans, and face liquidation if undercollateralized.
  *         Price feeds are retrieved via Chainlink oracles.
  */
-contract Borrowing is ProtocolAccessControl {
+contract Borrowing {
     /// @notice ERC20 token used as collateral.
     IERC20 public collateralToken;
 
@@ -35,6 +35,9 @@ contract Borrowing is ProtocolAccessControl {
 
     /// @notice Liquidation bonus in basis points (e.g., 500 for 5%).
     uint256 public liquidationIncentive;
+
+    /// @notice Reference to the shared protocol access control contract.
+    ProtocolAccessControl public protocolAccessControl;
 
     /// @notice Struct to track loan details.
     struct Loan {
@@ -79,7 +82,8 @@ contract Borrowing is ProtocolAccessControl {
         uint256 _interestRatePerSecond,
         uint256 _maxBorrowPercentage,
         uint256 _liquidationThreshold,
-        uint256 _liquidationIncentive
+        uint256 _liquidationIncentive,
+        address _protocolAccessControl
     ) {
         collateralToken = IERC20(_collateralToken);
         borrowToken = IERC20(_borrowToken);
@@ -89,6 +93,16 @@ contract Borrowing is ProtocolAccessControl {
         maxBorrowPercentage = _maxBorrowPercentage;
         liquidationThreshold = _liquidationThreshold;
         liquidationIncentive = _liquidationIncentive;
+        protocolAccessControl = ProtocolAccessControl(_protocolAccessControl);
+    }
+
+    /**
+     * @dev Modifier to check if the caller has the specified role.
+     * @param role The role to check.
+     */
+    modifier onlyRole(bytes32 role) {
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
+        _;
     }
 
     /**
@@ -174,7 +188,10 @@ contract Borrowing is ProtocolAccessControl {
      * @param borrower Address of the borrower to be liquidated.
      * @param repayAmount Amount (in borrow tokens) the liquidator intends to repay.
      */
-    function liquidateLoan(address borrower, uint256 repayAmount) external onlyRole(LIQUIDATOR_ROLE) {
+    function liquidateLoan(address borrower, uint256 repayAmount)
+        external
+        onlyRole(protocolAccessControl.LIQUIDATOR_ROLE())
+    {
         require(repayAmount > 0, "Repayment amount must be greater than zero");
         _accrueInterest(borrower);
         Loan storage loan = loans[borrower];
@@ -213,7 +230,7 @@ contract Borrowing is ProtocolAccessControl {
      * @notice Triggers interest accrual for the caller.
      * @dev This function calls the internal _accrueInterest function.
      */
-    function triggerAccrual(address _borrower) external onlyRole(GOVERNOR_ROLE) {
+    function triggerAccrual(address _borrower) external onlyRole(protocolAccessControl.GOVERNOR_ROLE()) {
         _accrueInterest(_borrower);
     }
 }

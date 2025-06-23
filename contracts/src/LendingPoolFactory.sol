@@ -15,12 +15,15 @@ import "./ProtocolAccessControl.sol";
  *         the symbol of the underlying token.
  * @dev Uses a `DepositTokenFactory` to deploy `DepositToken` before creating the `LendingPool`.
  */
-contract LendingPoolFactory is ProtocolAccessControl {
+contract LendingPoolFactory {
     /// @notice Address of the `DepositTokenFactory` used to deploy `DepositToken` instances.
     DepositTokenFactory public depositTokenFactory;
 
     /// @notice Mapping that associates an identifier (e.g., "DAI") with its corresponding `LendingPool` contract instance.
     mapping(string => LendingPool) public lendingPools;
+
+    /// @notice Reference to the shared protocol access control contract.
+    ProtocolAccessControl public protocolAccessControl;
 
     /// @notice Event emitted when a new `LendingPool` is created.
     /// @param lendingPoolAddress Address of the newly deployed `LendingPool` contract.
@@ -39,9 +42,20 @@ contract LendingPoolFactory is ProtocolAccessControl {
     /**
      * @notice Initializes the factory with the address of the `DepositTokenFactory`.
      * @param _depositTokenFactory Address of the `DepositTokenFactory` contract.
+     * @param _protocolAccessControl Address of the shared protocol access control contract.
      */
-    constructor(address _depositTokenFactory) {
+    constructor(address _depositTokenFactory, address _protocolAccessControl) {
         depositTokenFactory = DepositTokenFactory(_depositTokenFactory);
+        protocolAccessControl = ProtocolAccessControl(_protocolAccessControl);
+    }
+
+    /**
+     * @dev Modifier to check if the caller has the specified role.
+     * @param role The role to check.
+     */
+    modifier onlyRole(bytes32 role) {
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
+        _;
     }
 
     /**
@@ -58,7 +72,7 @@ contract LendingPoolFactory is ProtocolAccessControl {
      */
     function createLendingPool(address _underlyingToken, uint256 _interestRatePerSecond)
         external
-        onlyRole(GOVERNOR_ROLE)
+        onlyRole(protocolAccessControl.GOVERNOR_ROLE())
         returns (string memory id)
     {
         // Retrieve metadata of the underlying token
@@ -74,11 +88,13 @@ contract LendingPoolFactory is ProtocolAccessControl {
         DepositToken depositToken = depositTokenFactory.depositTokens(depositTokenId);
 
         // Deploy `LendingPool`, linking it with the underlying token, `DepositToken`, and interest rate
-        LendingPool pool = new LendingPool(_underlyingToken, address(depositToken), _interestRatePerSecond);
+        LendingPool pool = new LendingPool(
+            _underlyingToken, address(depositToken), _interestRatePerSecond, address(protocolAccessControl)
+        );
         lendingPools[id] = pool;
 
-        // Transfer ownership of `DepositToken` to `LendingPool`, allowing it to manage minting and burning
-        depositToken.grantRole(depositToken.LENDING_ROLE(), address(pool));
+        // Grant the LENDING_ROLE to the `LendingPool` in the shared access control contract
+        protocolAccessControl.grantRole(protocolAccessControl.LENDING_ROLE(), address(pool));
 
         emit LendingPoolCreated(address(pool), _underlyingToken, address(depositToken), id, _interestRatePerSecond);
         return id;

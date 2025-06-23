@@ -1,9 +1,9 @@
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import ContextProvider from "@/components/wagmi";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
+import ContextProvider from "@/components/wagmi";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -39,10 +39,10 @@ export default async function RootLayout({
 					enableSystem
 					disableTransitionOnChange
 				>
-				<ContextProvider cookies={cookies.get("cookie")}>
-					{children}
-					<Toaster />
-				</ContextProvider>
+					<ContextProvider cookies={cookies.get("cookie")}>
+						{children}
+						<Toaster />
+					</ContextProvider>
 				</ThemeProvider>
 			</body>
 		</html>
