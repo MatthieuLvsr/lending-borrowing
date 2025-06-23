@@ -54,10 +54,7 @@ contract BorrowingFactory {
      * @param role The role to check.
      */
     modifier onlyRole(bytes32 role) {
-        require(
-            protocolAccessControl.hasRole(role, msg.sender),
-            "AccessControl: caller does not have required role"
-        );
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
         _;
     }
 
@@ -84,14 +81,9 @@ contract BorrowingFactory {
         uint256 _maxBorrowPercentage,
         uint256 _liquidationThreshold,
         uint256 _liquidationIncentive
-    )
-        external
-        onlyRole(protocolAccessControl.GOVERNOR_ROLE())
-        returns (string memory id)
-    {
+    ) external onlyRole(protocolAccessControl.GOVERNOR_ROLE()) returns (string memory id) {
         // Retrieve token symbols for identifier generation
-        string memory collateralSymbol = IERC20Metadata(_collateralToken)
-            .symbol();
+        string memory collateralSymbol = IERC20Metadata(_collateralToken).symbol();
         string memory borrowSymbol = IERC20Metadata(_borrowToken).symbol();
 
         // Generate a unique identifier from token symbols (e.g., "ETH-DAI")
@@ -124,13 +116,7 @@ contract BorrowingFactory {
         borrowingIdToIndex[id] = index;
         borrowingExists[id] = true;
 
-        emit BorrowingCreated(
-            address(borrowing),
-            _collateralToken,
-            _borrowToken,
-            id,
-            index
-        );
+        emit BorrowingCreated(address(borrowing), _collateralToken, _borrowToken, id, index);
 
         return id;
     }
@@ -153,10 +139,11 @@ contract BorrowingFactory {
      * @return result Array of BorrowingInfo structs.
      * @return total Total number of borrowings.
      */
-    function getBorrowingsPaginated(
-        uint256 offset,
-        uint256 limit
-    ) external view returns (BorrowingInfo[] memory result, uint256 total) {
+    function getBorrowingsPaginated(uint256 offset, uint256 limit)
+        external
+        view
+        returns (BorrowingInfo[] memory result, uint256 total)
+    {
         require(limit <= 100, "Limit exceeds maximum of 100");
         require(limit > 0, "Limit must be greater than 0");
 
@@ -191,9 +178,7 @@ contract BorrowingFactory {
      * @param index Index in the borrowings array.
      * @return BorrowingInfo struct at the specified index.
      */
-    function getBorrowingByIndex(
-        uint256 index
-    ) external view returns (BorrowingInfo memory) {
+    function getBorrowingByIndex(uint256 index) external view returns (BorrowingInfo memory) {
         require(index < borrowings.length, "Index out of bounds");
         return borrowings[index];
     }
@@ -203,9 +188,7 @@ contract BorrowingFactory {
      * @param id Unique identifier to check.
      * @return True if borrowing exists, false otherwise.
      */
-    function borrowingExistsById(
-        string memory id
-    ) external view returns (bool) {
+    function borrowingExistsById(string memory id) external view returns (bool) {
         return borrowingExists[id];
     }
 }

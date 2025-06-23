@@ -69,10 +69,7 @@ contract LendingPoolFactory {
      * @param role The role to check.
      */
     modifier onlyRole(bytes32 role) {
-        require(
-            protocolAccessControl.hasRole(role, msg.sender),
-            "AccessControl: caller does not have required role"
-        );
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
         _;
     }
 
@@ -88,10 +85,7 @@ contract LendingPoolFactory {
      * @param _interestRatePerSecond Interest rate per second (scaled to 1e18 precision).
      * @return id The generated identifier (derived from the underlying token's symbol) for the newly created `LendingPool`.
      */
-    function createLendingPool(
-        address _underlyingToken,
-        uint256 _interestRatePerSecond
-    )
+    function createLendingPool(address _underlyingToken, uint256 _interestRatePerSecond)
         external
         onlyRole(protocolAccessControl.GOVERNOR_ROLE())
         returns (string memory id)
@@ -105,20 +99,12 @@ contract LendingPoolFactory {
         require(!lendingPoolExists[id], "LendingPool already exists");
 
         // Deploy `DepositToken` via `DepositTokenFactory`
-        string memory depositTokenId = depositTokenFactory.createDepositToken(
-            _underlyingToken,
-            address(this)
-        );
-        address depositTokenAddress = depositTokenFactory.getDepositToken(
-            depositTokenId
-        );
+        string memory depositTokenId = depositTokenFactory.createDepositToken(_underlyingToken, address(this));
+        address depositTokenAddress = depositTokenFactory.getDepositToken(depositTokenId);
 
         // Deploy `LendingPool`, linking it with the underlying token, `DepositToken`, and interest rate
         LendingPool pool = new LendingPool(
-            _underlyingToken,
-            depositTokenAddress,
-            _interestRatePerSecond,
-            address(protocolAccessControl)
+            _underlyingToken, depositTokenAddress, _interestRatePerSecond, address(protocolAccessControl)
         );
 
         // Store lending pool information
@@ -136,19 +122,9 @@ contract LendingPoolFactory {
         lendingPoolExists[id] = true;
 
         // Grant the LENDING_ROLE to the `LendingPool` in the shared access control contract
-        protocolAccessControl.grantRole(
-            protocolAccessControl.LENDING_ROLE(),
-            address(pool)
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.LENDING_ROLE(), address(pool));
 
-        emit LendingPoolCreated(
-            address(pool),
-            _underlyingToken,
-            depositTokenAddress,
-            id,
-            _interestRatePerSecond,
-            index
-        );
+        emit LendingPoolCreated(address(pool), _underlyingToken, depositTokenAddress, id, _interestRatePerSecond, index);
         return id;
     }
 
@@ -170,10 +146,11 @@ contract LendingPoolFactory {
      * @return result Array of LendingPoolInfo structs.
      * @return total Total number of lending pools.
      */
-    function getLendingPoolsPaginated(
-        uint256 offset,
-        uint256 limit
-    ) external view returns (LendingPoolInfo[] memory result, uint256 total) {
+    function getLendingPoolsPaginated(uint256 offset, uint256 limit)
+        external
+        view
+        returns (LendingPoolInfo[] memory result, uint256 total)
+    {
         require(limit <= 100, "Limit exceeds maximum of 100");
         require(limit > 0, "Limit must be greater than 0");
 
@@ -208,9 +185,7 @@ contract LendingPoolFactory {
      * @param index Index in the lendingPools array.
      * @return LendingPoolInfo struct at the specified index.
      */
-    function getLendingPoolByIndex(
-        uint256 index
-    ) external view returns (LendingPoolInfo memory) {
+    function getLendingPoolByIndex(uint256 index) external view returns (LendingPoolInfo memory) {
         require(index < lendingPools.length, "Index out of bounds");
         return lendingPools[index];
     }
@@ -220,9 +195,7 @@ contract LendingPoolFactory {
      * @param id Unique identifier to check.
      * @return True if lending pool exists, false otherwise.
      */
-    function lendingPoolExistsById(
-        string memory id
-    ) external view returns (bool) {
+    function lendingPoolExistsById(string memory id) external view returns (bool) {
         return lendingPoolExists[id];
     }
 }

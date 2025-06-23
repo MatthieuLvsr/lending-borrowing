@@ -27,39 +27,22 @@ contract LendingPoolFactoryTest is Test {
         protocolAccessControl = new ProtocolAccessControl();
 
         // Deploy a mock DepositTokenFactory
-        depositTokenFactory = new DepositTokenFactory(
-            address(protocolAccessControl)
-        );
+        depositTokenFactory = new DepositTokenFactory(address(protocolAccessControl));
 
         // Deploy the LendingPoolFactory contract
-        factory = new LendingPoolFactory(
-            address(depositTokenFactory),
-            address(protocolAccessControl)
-        );
+        factory = new LendingPoolFactory(address(depositTokenFactory), address(protocolAccessControl));
 
         // Deploy a mock ERC20 token
         mockToken = new MockERC20("Mock Token", "MOCK");
 
         // Grant the GOVERNOR_ROLE to the test contract and factory
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            governor
-        );
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            address(factory)
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), governor);
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), address(factory));
         // Grant DEFAULT_ADMIN_ROLE to factory so it can grant LENDING_ROLE to pools
-        protocolAccessControl.grantRole(
-            protocolAccessControl.DEFAULT_ADMIN_ROLE(),
-            address(factory)
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.DEFAULT_ADMIN_ROLE(), address(factory));
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -78,10 +61,7 @@ contract LendingPoolFactoryTest is Test {
         vm.startPrank(governor);
 
         // Create LendingPool
-        string memory tokenId = factory.createLendingPool(
-            address(mockToken),
-            interestRatePerSecond
-        );
+        string memory tokenId = factory.createLendingPool(address(mockToken), interestRatePerSecond);
 
         // Check that the token ID is correct
         assertEq(tokenId, "MOCK");
@@ -130,10 +110,7 @@ contract LendingPoolFactoryTest is Test {
         factory.createLendingPool(address(token3), interestRatePerSecond);
 
         // Test pagination
-        (
-            LendingPoolFactory.LendingPoolInfo[] memory result,
-            uint256 total
-        ) = factory.getLendingPoolsPaginated(0, 2);
+        (LendingPoolFactory.LendingPoolInfo[] memory result, uint256 total) = factory.getLendingPoolsPaginated(0, 2);
 
         assertEq(total, 3);
         assertEq(result.length, 2);
@@ -153,10 +130,7 @@ contract LendingPoolFactoryTest is Test {
         vm.startPrank(governor);
 
         // Test that limit of 100 is accepted
-        (
-            LendingPoolFactory.LendingPoolInfo[] memory result,
-            uint256 total
-        ) = factory.getLendingPoolsPaginated(0, 100);
+        (LendingPoolFactory.LendingPoolInfo[] memory result, uint256 total) = factory.getLendingPoolsPaginated(0, 100);
         assertEq(total, 0);
         assertEq(result.length, 0);
 
@@ -199,8 +173,7 @@ contract LendingPoolFactoryTest is Test {
         factory.createLendingPool(address(mockToken), interestRatePerSecond);
 
         // Get by index
-        LendingPoolFactory.LendingPoolInfo memory info = factory
-            .getLendingPoolByIndex(0);
+        LendingPoolFactory.LendingPoolInfo memory info = factory.getLendingPoolByIndex(0);
         assertEq(info.id, "MOCK");
         assertEq(info.underlyingToken, address(mockToken));
         assertEq(info.interestRatePerSecond, interestRatePerSecond);

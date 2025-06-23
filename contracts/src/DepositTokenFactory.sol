@@ -57,10 +57,7 @@ contract DepositTokenFactory {
      * @param role The role to check.
      */
     modifier onlyRole(bytes32 role) {
-        require(
-            protocolAccessControl.hasRole(role, msg.sender),
-            "AccessControl: caller does not have required role"
-        );
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
         _;
     }
 
@@ -72,10 +69,7 @@ contract DepositTokenFactory {
      *                      (authorized to mint and burn tokens).
      * @return id The identifier generated (e.g., "DAI") for the newly created `DepositToken`.
      */
-    function createDepositToken(
-        address underlyingToken,
-        address liquidityPool
-    )
+    function createDepositToken(address underlyingToken, address liquidityPool)
         external
         onlyRole(protocolAccessControl.GOVERNOR_ROLE())
         returns (string memory id)
@@ -90,19 +84,11 @@ contract DepositTokenFactory {
         require(!depositTokenExists[id], "DepositToken already exists");
 
         // Construct name and symbol for the `DepositToken`
-        string memory depositTokenName = string(
-            abi.encodePacked("Deposit ", tokenName)
-        );
-        string memory depositTokenSymbol = string(
-            abi.encodePacked("d", tokenSymbol)
-        );
+        string memory depositTokenName = string(abi.encodePacked("Deposit ", tokenName));
+        string memory depositTokenSymbol = string(abi.encodePacked("d", tokenSymbol));
 
         // Deploy the `DepositToken` contract
-        DepositToken dt = new DepositToken(
-            depositTokenName,
-            depositTokenSymbol,
-            address(protocolAccessControl)
-        );
+        DepositToken dt = new DepositToken(depositTokenName, depositTokenSymbol, address(protocolAccessControl));
 
         // Store deposit token information
         uint256 index = depositTokens.length;
@@ -119,14 +105,7 @@ contract DepositTokenFactory {
         depositTokenExists[id] = true;
 
         // Emit event after successful deployment
-        emit DepositTokenCreated(
-            address(dt),
-            depositTokenName,
-            depositTokenSymbol,
-            liquidityPool,
-            id,
-            index
-        );
+        emit DepositTokenCreated(address(dt), depositTokenName, depositTokenSymbol, liquidityPool, id, index);
 
         return id;
     }
@@ -149,10 +128,11 @@ contract DepositTokenFactory {
      * @return result Array of DepositTokenInfo structs.
      * @return total Total number of deposit tokens.
      */
-    function getDepositTokensPaginated(
-        uint256 offset,
-        uint256 limit
-    ) external view returns (DepositTokenInfo[] memory result, uint256 total) {
+    function getDepositTokensPaginated(uint256 offset, uint256 limit)
+        external
+        view
+        returns (DepositTokenInfo[] memory result, uint256 total)
+    {
         require(limit <= 100, "Limit exceeds maximum of 100");
         require(limit > 0, "Limit must be greater than 0");
 
@@ -187,9 +167,7 @@ contract DepositTokenFactory {
      * @param index Index in the depositTokens array.
      * @return DepositTokenInfo struct at the specified index.
      */
-    function getDepositTokenByIndex(
-        uint256 index
-    ) external view returns (DepositTokenInfo memory) {
+    function getDepositTokenByIndex(uint256 index) external view returns (DepositTokenInfo memory) {
         require(index < depositTokens.length, "Index out of bounds");
         return depositTokens[index];
     }
@@ -199,9 +177,7 @@ contract DepositTokenFactory {
      * @param id Unique identifier to check.
      * @return True if deposit token exists, false otherwise.
      */
-    function depositTokenExistsById(
-        string memory id
-    ) external view returns (bool) {
+    function depositTokenExistsById(string memory id) external view returns (bool) {
         return depositTokenExists[id];
     }
 }

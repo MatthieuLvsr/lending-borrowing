@@ -41,16 +41,10 @@ contract BorrowingFactoryTest is Test {
         factory = new BorrowingFactory(address(protocolAccessControl));
 
         // Grant the GOVERNOR_ROLE to the test contract
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            governor
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), governor);
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -183,10 +177,7 @@ contract BorrowingFactoryTest is Test {
         );
 
         // Test pagination
-        (
-            BorrowingFactory.BorrowingInfo[] memory result,
-            uint256 total
-        ) = factory.getBorrowingsPaginated(0, 2);
+        (BorrowingFactory.BorrowingInfo[] memory result, uint256 total) = factory.getBorrowingsPaginated(0, 2);
 
         assertEq(total, 3);
         assertEq(result.length, 2);
@@ -206,10 +197,7 @@ contract BorrowingFactoryTest is Test {
         vm.startPrank(governor);
 
         // Test that limit of 100 is accepted
-        (
-            BorrowingFactory.BorrowingInfo[] memory result,
-            uint256 total
-        ) = factory.getBorrowingsPaginated(0, 100);
+        (BorrowingFactory.BorrowingInfo[] memory result, uint256 total) = factory.getBorrowingsPaginated(0, 100);
         assertEq(total, 0);
         assertEq(result.length, 0);
 
@@ -270,8 +258,7 @@ contract BorrowingFactoryTest is Test {
         );
 
         // Get by index
-        BorrowingFactory.BorrowingInfo memory info = factory
-            .getBorrowingByIndex(0);
+        BorrowingFactory.BorrowingInfo memory info = factory.getBorrowingByIndex(0);
         assertEq(info.id, "COLL-BORR");
         assertEq(info.collateralToken, address(collateralToken));
         assertEq(info.borrowToken, address(borrowToken));

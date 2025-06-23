@@ -28,16 +28,10 @@ contract DepositTokenFactoryTest is Test {
         mockToken = new MockERC20("Mock Token", "MOCK");
 
         // Grant the GOVERNOR_ROLE to the test contract
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            owner
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), owner);
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -62,10 +56,7 @@ contract DepositTokenFactoryTest is Test {
         factory.getDepositToken(tokenId);
 
         // Create a new DepositToken
-        string memory returnedId = factory.createDepositToken(
-            address(mockToken),
-            liquidityPool
-        );
+        string memory returnedId = factory.createDepositToken(address(mockToken), liquidityPool);
 
         // Check if the returned ID is correct
         assertEq(returnedId, "MOCK");
@@ -121,10 +112,7 @@ contract DepositTokenFactoryTest is Test {
         factory.createDepositToken(address(token3), liquidityPool);
 
         // Test pagination
-        (
-            DepositTokenFactory.DepositTokenInfo[] memory result,
-            uint256 total
-        ) = factory.getDepositTokensPaginated(0, 2);
+        (DepositTokenFactory.DepositTokenInfo[] memory result, uint256 total) = factory.getDepositTokensPaginated(0, 2);
 
         assertEq(total, 3);
         assertEq(result.length, 2);
@@ -144,10 +132,8 @@ contract DepositTokenFactoryTest is Test {
         vm.startPrank(owner);
 
         // Test that limit of 100 is accepted
-        (
-            DepositTokenFactory.DepositTokenInfo[] memory result,
-            uint256 total
-        ) = factory.getDepositTokensPaginated(0, 100);
+        (DepositTokenFactory.DepositTokenInfo[] memory result, uint256 total) =
+            factory.getDepositTokensPaginated(0, 100);
         assertEq(total, 0);
         assertEq(result.length, 0);
 
@@ -190,8 +176,7 @@ contract DepositTokenFactoryTest is Test {
         factory.createDepositToken(address(mockToken), liquidityPool);
 
         // Get by index
-        DepositTokenFactory.DepositTokenInfo memory info = factory
-            .getDepositTokenByIndex(0);
+        DepositTokenFactory.DepositTokenInfo memory info = factory.getDepositTokenByIndex(0);
         assertEq(info.id, "MOCK");
         assertEq(info.name, "Deposit Mock Token");
         assertEq(info.symbol, "dMOCK");
