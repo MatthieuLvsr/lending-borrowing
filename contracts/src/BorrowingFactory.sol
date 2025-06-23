@@ -11,9 +11,12 @@ import "./ProtocolAccessControl.sol";
  *         Each instance is uniquely identified by a string derived from the collateral token symbol
  *         and the borrowed token symbol (e.g., "ETH-DAI").
  */
-contract BorrowingFactory is ProtocolAccessControl {
+contract BorrowingFactory {
     /// @notice Mapping that associates an identifier with its corresponding `Borrowing` contract instance.
     mapping(string => Borrowing) public borrowings;
+
+    /// @notice Reference to the shared protocol access control contract.
+    ProtocolAccessControl public protocolAccessControl;
 
     /// @notice Event emitted when a new `Borrowing` contract is deployed.
     /// @param borrowingAddress Address of the newly deployed `Borrowing` contract.
@@ -21,10 +24,27 @@ contract BorrowingFactory is ProtocolAccessControl {
     /// @param borrowToken Address of the ERC20 token that will be borrowed.
     /// @param id Unique identifier for the borrowing pair (e.g., "ETH-DAI").
     event BorrowingCreated(
-        address indexed borrowingAddress, address indexed collateralToken, address indexed borrowToken, string id
+        address indexed borrowingAddress,
+        address indexed collateralToken,
+        address indexed borrowToken,
+        string id
     );
 
-    constructor() {}
+    constructor(address _protocolAccessControl) {
+        protocolAccessControl = ProtocolAccessControl(_protocolAccessControl);
+    }
+
+    /**
+     * @dev Modifier to check if the caller has the specified role.
+     * @param role The role to check.
+     */
+    modifier onlyRole(bytes32 role) {
+        require(
+            protocolAccessControl.hasRole(role, msg.sender),
+            "AccessControl: caller does not have required role"
+        );
+        _;
+    }
 
     /**
      * @notice Deploys a new `Borrowing` contract for a given token pair.
@@ -49,14 +69,22 @@ contract BorrowingFactory is ProtocolAccessControl {
         uint256 _maxBorrowPercentage,
         uint256 _liquidationThreshold,
         uint256 _liquidationIncentive
-    ) external onlyRole(GOVERNOR_ROLE) returns (string memory id) {
+    )
+        external
+        onlyRole(protocolAccessControl.GOVERNOR_ROLE())
+        returns (string memory id)
+    {
         // Retrieve token symbols for identifier generation
-        string memory collateralSymbol = IERC20Metadata(_collateralToken).symbol();
+        string memory collateralSymbol = IERC20Metadata(_collateralToken)
+            .symbol();
         string memory borrowSymbol = IERC20Metadata(_borrowToken).symbol();
 
         // Generate a unique identifier from token symbols (e.g., "ETH-DAI")
         id = string(abi.encodePacked(collateralSymbol, "-", borrowSymbol));
-        require(address(borrowings[id]) == address(0), "Borrowing already exists");
+        require(
+            address(borrowings[id]) == address(0),
+            "Borrowing already exists"
+        );
 
         // Deploy `Borrowing` contract with specified parameters
         Borrowing borrowing = new Borrowing(
@@ -67,11 +95,17 @@ contract BorrowingFactory is ProtocolAccessControl {
             _interestRatePerSecond,
             _maxBorrowPercentage,
             _liquidationThreshold,
-            _liquidationIncentive
+            _liquidationIncentive,
+            address(protocolAccessControl)
         );
         borrowings[id] = borrowing;
 
-        emit BorrowingCreated(address(borrowing), _collateralToken, _borrowToken, id);
+        emit BorrowingCreated(
+            address(borrowing),
+            _collateralToken,
+            _borrowToken,
+            id
+        );
 
         return id;
     }

@@ -6,12 +6,14 @@ import "../src/LendingPoolFactory.sol";
 import "../src/LendingPool.sol";
 import "../src/DepositToken.sol";
 import "../src/DepositTokenFactory.sol";
+import "../src/ProtocolAccessControl.sol";
 
 import "./Mocks/MockERC20.sol";
 
 contract LendingPoolFactoryTest is Test {
     LendingPoolFactory factory;
     DepositTokenFactory depositTokenFactory;
+    ProtocolAccessControl protocolAccessControl;
     MockERC20 mockToken;
     address owner;
     address governor;
@@ -21,21 +23,43 @@ contract LendingPoolFactoryTest is Test {
         owner = address(this);
         governor = address(0x123);
 
+        // Deploy shared protocol access control
+        protocolAccessControl = new ProtocolAccessControl();
+
         // Deploy a mock DepositTokenFactory
-        depositTokenFactory = new DepositTokenFactory();
+        depositTokenFactory = new DepositTokenFactory(
+            address(protocolAccessControl)
+        );
 
         // Deploy the LendingPoolFactory contract
-        factory = new LendingPoolFactory(address(depositTokenFactory));
+        factory = new LendingPoolFactory(
+            address(depositTokenFactory),
+            address(protocolAccessControl)
+        );
 
         // Deploy a mock ERC20 token
         mockToken = new MockERC20("Mock Token", "MOCK");
 
-        // Grant the GOVERNOR_ROLE to the test contract
-        factory.grantRole(factory.GOVERNOR_ROLE(), governor);
-        depositTokenFactory.grantRole(depositTokenFactory.GOVERNOR_ROLE(), address(factory));
+        // Grant the GOVERNOR_ROLE to the test contract and factory
+        protocolAccessControl.grantRole(
+            protocolAccessControl.GOVERNOR_ROLE(),
+            governor
+        );
+        protocolAccessControl.grantRole(
+            protocolAccessControl.GOVERNOR_ROLE(),
+            address(factory)
+        );
+        // Grant DEFAULT_ADMIN_ROLE to factory so it can grant LENDING_ROLE to pools
+        protocolAccessControl.grantRole(
+            protocolAccessControl.DEFAULT_ADMIN_ROLE(),
+            address(factory)
+        );
     }
 
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -54,7 +78,10 @@ contract LendingPoolFactoryTest is Test {
         vm.startPrank(governor);
 
         // Create LendingPool
-        string memory tokenId = factory.createLendingPool(address(mockToken), interestRatePerSecond);
+        string memory tokenId = factory.createLendingPool(
+            address(mockToken),
+            interestRatePerSecond
+        );
 
         // Check that the token ID is correct
         assertEq(tokenId, "MOCK");
@@ -84,14 +111,7 @@ contract LendingPoolFactoryTest is Test {
         vm.startPrank(attacker);
 
         // Expect revert when non-governor tries to create LendingPool
-        vm.expectRevert(
-            abi.encodePacked(
-                "AccessControl: account ",
-                toHexString(uint256(uint160(attacker)), 20),
-                " is missing role ",
-                toHexString(uint256(factory.GOVERNOR_ROLE()), 32)
-            )
-        );
+        vm.expectRevert("AccessControl: caller does not have required role");
         factory.createLendingPool(address(mockToken), interestRatePerSecond);
 
         vm.stopPrank();

@@ -14,7 +14,7 @@ import "./ProtocolAccessControl.sol";
  *         The value of `DepositToken` changes over time due to interest accrual via `exchangeRate`.
  * @dev The `DepositToken` contract is specified at deployment via the constructor.
  */
-contract LendingPool is ProtocolAccessControl {
+contract LendingPool {
     /// @notice Token representing user shares in the pool.
     DepositToken public depositToken;
 
@@ -31,24 +31,54 @@ contract LendingPool is ProtocolAccessControl {
     /// @notice Interest rate applied per second, scaled to 1e18 precision.
     uint256 public interestRatePerSecond;
 
+    /// @notice Reference to the shared protocol access control contract.
+    ProtocolAccessControl public protocolAccessControl;
+
     /// @notice Emitted when a user deposits underlying tokens into the pool.
-    event Deposit(address indexed user, uint256 underlyingAmount, uint256 tokenAmount);
+    event Deposit(
+        address indexed user,
+        uint256 underlyingAmount,
+        uint256 tokenAmount
+    );
 
     /// @notice Emitted when a user withdraws funds from the pool.
-    event Withdraw(address indexed user, uint256 underlyingAmount, uint256 tokenAmount);
+    event Withdraw(
+        address indexed user,
+        uint256 underlyingAmount,
+        uint256 tokenAmount
+    );
 
     /**
      * @notice Initializes the lending pool contract.
      * @param _underlyingToken Address of the underlying ERC20 token (e.g., DAI).
      * @param _depositToken Address of the associated `DepositToken`, deployed via `DepositTokenFactory`.
      * @param _interestRatePerSecond Interest rate applied per second, with 1e18 precision.
+     * @param _protocolAccessControl Address of the shared protocol access control contract.
      */
-    constructor(address _underlyingToken, address _depositToken, uint256 _interestRatePerSecond) {
+    constructor(
+        address _underlyingToken,
+        address _depositToken,
+        uint256 _interestRatePerSecond,
+        address _protocolAccessControl
+    ) {
         underlyingToken = IERC20(_underlyingToken);
         depositToken = DepositToken(_depositToken);
         interestRatePerSecond = _interestRatePerSecond;
         exchangeRate = 1e18; // Initially, 1 DepositToken = 1 underlying unit
         lastAccrualTimestamp = block.timestamp;
+        protocolAccessControl = ProtocolAccessControl(_protocolAccessControl);
+    }
+
+    /**
+     * @dev Modifier to check if the caller has the specified role.
+     * @param role The role to check.
+     */
+    modifier onlyRole(bytes32 role) {
+        require(
+            protocolAccessControl.hasRole(role, msg.sender),
+            "AccessControl: caller does not have required role"
+        );
+        _;
     }
 
     /**
@@ -60,7 +90,10 @@ contract LendingPool is ProtocolAccessControl {
         require(amount > 0, "Amount must be greater than zero");
 
         // Transfer underlying tokens from the user to the contract
-        require(underlyingToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        require(
+            underlyingToken.transferFrom(msg.sender, address(this), amount),
+            "Transfer failed"
+        );
 
         _accrueInterest();
 
@@ -83,11 +116,17 @@ contract LendingPool is ProtocolAccessControl {
 
         // Calculate the equivalent underlying token amount: (tokenAmount * exchangeRate) / 1e18
         uint256 underlyingAmount = (tokenAmount * exchangeRate) / 1e18;
-        require(underlyingToken.balanceOf(address(this)) >= underlyingAmount, "Insufficient funds");
+        require(
+            underlyingToken.balanceOf(address(this)) >= underlyingAmount,
+            "Insufficient funds"
+        );
 
         // Burn `DepositToken` and transfer the equivalent underlying tokens
         depositToken.burn(msg.sender, tokenAmount);
-        require(underlyingToken.transfer(msg.sender, underlyingAmount), "Transfer failed");
+        require(
+            underlyingToken.transfer(msg.sender, underlyingAmount),
+            "Transfer failed"
+        );
 
         emit Withdraw(msg.sender, underlyingAmount, tokenAmount);
     }
@@ -100,13 +139,17 @@ contract LendingPool is ProtocolAccessControl {
         uint256 currentTime = block.timestamp;
         if (currentTime > lastAccrualTimestamp) {
             uint256 timeElapsed = currentTime - lastAccrualTimestamp;
-            uint256 interestAccrued = (exchangeRate * interestRatePerSecond * timeElapsed) / 1e18;
+            uint256 interestAccrued = (exchangeRate *
+                interestRatePerSecond *
+                timeElapsed) / 1e18;
             exchangeRate += interestAccrued;
             lastAccrualTimestamp = currentTime;
         }
     }
 
-    function setInterestRate(uint256 _value) external onlyRole(GOVERNOR_ROLE) {
+    function setInterestRate(
+        uint256 _value
+    ) external onlyRole(protocolAccessControl.GOVERNOR_ROLE()) {
         interestRatePerSecond = _value;
     }
 }

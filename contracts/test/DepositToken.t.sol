@@ -3,9 +3,11 @@ pragma solidity ^0.8.18;
 
 import "forge-std/Test.sol";
 import "../src/DepositToken.sol";
+import "../src/ProtocolAccessControl.sol";
 
 contract DepositTokenTest is Test {
     DepositToken depositToken;
+    ProtocolAccessControl protocolAccessControl;
     address owner;
     address lendingContract;
     address user;
@@ -15,14 +17,27 @@ contract DepositTokenTest is Test {
         lendingContract = address(0x123);
         user = address(0x456);
 
-        // Deploy DepositToken contract
-        depositToken = new DepositToken("Deposit Token", "dTOKEN");
+        // Deploy shared protocol access control
+        protocolAccessControl = new ProtocolAccessControl();
 
-        // Grant the lending role to lendingContract
-        depositToken.grantRole(depositToken.LENDING_ROLE(), lendingContract);
+        // Deploy DepositToken contract
+        depositToken = new DepositToken(
+            "Deposit Token",
+            "dTOKEN",
+            address(protocolAccessControl)
+        );
+
+        // Grant the lending role to lendingContract in the shared access control
+        protocolAccessControl.grantRole(
+            protocolAccessControl.LENDING_ROLE(),
+            lendingContract
+        );
     }
 
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -54,14 +69,7 @@ contract DepositTokenTest is Test {
 
         // Unauthorized user should fail to mint
         vm.startPrank(user);
-        vm.expectRevert(
-            abi.encodePacked(
-                "AccessControl: account ",
-                toHexString(uint256(uint160(user)), 20),
-                " is missing role ",
-                toHexString(uint256(depositToken.LENDING_ROLE()), 32)
-            )
-        );
+        vm.expectRevert("AccessControl: caller does not have required role");
         depositToken.mint(user, mintAmount);
         vm.stopPrank();
     }
@@ -98,14 +106,7 @@ contract DepositTokenTest is Test {
 
         // Unauthorized user should fail to burn
         vm.startPrank(user);
-        vm.expectRevert(
-            abi.encodePacked(
-                "AccessControl: account ",
-                toHexString(uint256(uint160(user)), 20),
-                " is missing role ",
-                toHexString(uint256(depositToken.LENDING_ROLE()), 32)
-            )
-        );
+        vm.expectRevert("AccessControl: caller does not have required role");
         depositToken.burn(user, burnAmount);
         vm.stopPrank();
     }

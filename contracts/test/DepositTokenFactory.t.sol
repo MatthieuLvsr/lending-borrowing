@@ -4,10 +4,12 @@ pragma solidity ^0.8.25;
 import "forge-std/Test.sol";
 import "../src/DepositTokenFactory.sol";
 import "../src/DepositToken.sol";
+import "../src/ProtocolAccessControl.sol";
 import "./Mocks/MockERC20.sol";
 
 contract DepositTokenFactoryTest is Test {
     DepositTokenFactory factory;
+    ProtocolAccessControl protocolAccessControl;
     MockERC20 mockToken;
     address owner;
     address liquidityPool;
@@ -16,14 +18,26 @@ contract DepositTokenFactoryTest is Test {
         owner = address(this);
         liquidityPool = address(0x123456);
 
+        // Deploy shared protocol access control
+        protocolAccessControl = new ProtocolAccessControl();
+
         // Deploy the factory contract
-        factory = new DepositTokenFactory();
+        factory = new DepositTokenFactory(address(protocolAccessControl));
 
         // Deploy a mock ERC20 token
         mockToken = new MockERC20("Mock Token", "MOCK");
+
+        // Grant the GOVERNOR_ROLE to the test contract
+        protocolAccessControl.grantRole(
+            protocolAccessControl.GOVERNOR_ROLE(),
+            owner
+        );
     }
 
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -48,7 +62,10 @@ contract DepositTokenFactoryTest is Test {
         assertEq(address(existing), address(0));
 
         // Create a new DepositToken
-        string memory returnedId = factory.createDepositToken(address(mockToken), liquidityPool);
+        string memory returnedId = factory.createDepositToken(
+            address(mockToken),
+            liquidityPool
+        );
 
         // Check if the returned ID is correct
         assertEq(returnedId, "MOCK");
@@ -84,14 +101,7 @@ contract DepositTokenFactoryTest is Test {
         vm.startPrank(attacker);
 
         // Expect the call to fail because attacker is not the owner
-        vm.expectRevert(
-            abi.encodePacked(
-                "AccessControl: account ",
-                toHexString(uint256(uint160(attacker)), 20),
-                " is missing role ",
-                toHexString(uint256(factory.GOVERNOR_ROLE()), 32)
-            )
-        );
+        vm.expectRevert("AccessControl: caller does not have required role");
         factory.createDepositToken(address(mockToken), liquidityPool);
 
         vm.stopPrank();

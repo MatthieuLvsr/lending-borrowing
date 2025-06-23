@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * @title ProtocolAccessControl
  * @notice Centralized access control module for the protocol.
  * @dev Defines roles for administration, governance, and liquidation.
+ *      This contract should be deployed once and referenced by other protocol contracts.
  */
 contract ProtocolAccessControl is AccessControl {
     /// @notice Role for governance-related actions, such as modifying protocol parameters.

@@ -4,11 +4,13 @@ pragma solidity ^0.8.18;
 import "forge-std/Test.sol";
 import "../src/BorrowingFactory.sol";
 import "../src/Borrowing.sol";
+import "../src/ProtocolAccessControl.sol";
 import "./Mocks/MockERC20.sol";
 import "./Mocks/MockPriceFeed.sol";
 
 contract BorrowingFactoryTest is Test {
     BorrowingFactory factory;
+    ProtocolAccessControl protocolAccessControl;
     MockERC20 collateralToken;
     MockERC20 borrowToken;
     MockPriceFeed collateralPriceFeed;
@@ -24,6 +26,9 @@ contract BorrowingFactoryTest is Test {
         governor = address(this);
         nonGovernor = address(0x123);
 
+        // Deploy shared protocol access control
+        protocolAccessControl = new ProtocolAccessControl();
+
         // Deploy mock tokens
         collateralToken = new MockERC20("Collateral Token", "COLL");
         borrowToken = new MockERC20("Borrow Token", "BORR");
@@ -33,13 +38,19 @@ contract BorrowingFactoryTest is Test {
         borrowPriceFeed = new MockPriceFeed(1e18);
 
         // Deploy BorrowingFactory contract
-        factory = new BorrowingFactory();
+        factory = new BorrowingFactory(address(protocolAccessControl));
 
         // Grant the GOVERNOR_ROLE to the test contract
-        factory.grantRole(factory.GOVERNOR_ROLE(), governor);
+        protocolAccessControl.grantRole(
+            protocolAccessControl.GOVERNOR_ROLE(),
+            governor
+        );
     }
 
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+    function toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -114,14 +125,7 @@ contract BorrowingFactoryTest is Test {
         vm.startPrank(nonGovernor);
 
         // Expect revert when non-governor tries to create a Borrowing instance
-        vm.expectRevert(
-            abi.encodePacked(
-                "AccessControl: account ",
-                toHexString(uint256(uint160(nonGovernor)), 20),
-                " is missing role ",
-                toHexString(uint256(factory.GOVERNOR_ROLE()), 32)
-            )
-        );
+        vm.expectRevert("AccessControl: caller does not have required role");
 
         factory.createBorrowing(
             address(collateralToken),
