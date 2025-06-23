@@ -49,14 +49,8 @@ contract BorrowingTest is Test {
             address(protocolAccessControl)
         );
         // Accordez explicitement le rôle LIQUIDATOR_ROLE au liquidateur pour les tests de liquidation
-        protocolAccessControl.grantRole(
-            protocolAccessControl.LIQUIDATOR_ROLE(),
-            liquidator
-        );
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            governor
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.LIQUIDATOR_ROLE(), liquidator);
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), governor);
     }
 
     function testDepositCollateral() public {
@@ -69,9 +63,7 @@ contract BorrowingTest is Test {
         vm.stopPrank();
 
         // Vérifier que le loan du borrower a bien été mis à jour
-        (uint256 collateralAmount, uint256 borrowedAmount, ) = borrowing.loans(
-            borrower
-        );
+        (uint256 collateralAmount, uint256 borrowedAmount,) = borrowing.loans(borrower);
         assertEq(collateralAmount, depositAmount);
         assertEq(borrowedAmount, 0);
     }
@@ -112,7 +104,7 @@ contract BorrowingTest is Test {
         borrowing.borrow(borrowAmount);
         vm.stopPrank();
 
-        (, uint256 borrowedAmount, ) = borrowing.loans(borrower);
+        (, uint256 borrowedAmount,) = borrowing.loans(borrower);
         assertEq(borrowedAmount, borrowAmount);
         // Vérifier que le borrower reçoit bien les tokens empruntés
         assertEq(borrowToken.balanceOf(borrower), borrowAmount);
@@ -154,8 +146,7 @@ contract BorrowingTest is Test {
     function testBorrowFailsWithInsufficientCollateral() public {
         uint256 depositAmount = 1000 * 1e18;
         // Essayer d'emprunter un montant supérieur au maximum autorisé
-        uint256 borrowAmount = ((depositAmount * maxBorrowPercentage) / 100) +
-            1;
+        uint256 borrowAmount = ((depositAmount * maxBorrowPercentage) / 100) + 1;
         collateralToken.mint(borrower, depositAmount);
         vm.startPrank(borrower);
         collateralToken.approve(address(borrowing), depositAmount);
@@ -180,7 +171,7 @@ contract BorrowingTest is Test {
         borrowToken.approve(address(borrowing), borrowAmount);
         borrowing.repay(borrowAmount);
         vm.stopPrank();
-        (, uint256 borrowedAmount, ) = borrowing.loans(borrower);
+        (, uint256 borrowedAmount,) = borrowing.loans(borrower);
         assertEq(borrowedAmount, 0);
     }
 
@@ -199,7 +190,7 @@ contract BorrowingTest is Test {
         borrowToken.approve(address(borrowing), repayAmount);
         borrowing.repay(repayAmount);
         vm.stopPrank();
-        (, uint256 borrowedAmount, ) = borrowing.loans(borrower);
+        (, uint256 borrowedAmount,) = borrowing.loans(borrower);
         assertEq(borrowedAmount, borrowAmount - repayAmount);
     }
 
@@ -266,16 +257,14 @@ contract BorrowingTest is Test {
         // Effectuer une liquidation partielle.
         uint256 repayAmount = 100 * 1e18; // montant à rembourser
         // Calcul attendu: computedCollateralToSeize = 100e18 * 10500/10000 = 105e18.
-        uint256 expectedCollateralSeized = (repayAmount *
-            (10000 + liquidationIncentive)) / 10000;
+        uint256 expectedCollateralSeized = (repayAmount * (10000 + liquidationIncentive)) / 10000;
         vm.startPrank(liquidator);
         borrowToken.mint(liquidator, repayAmount);
         borrowToken.approve(address(borrowing), repayAmount);
         borrowing.liquidateLoan(borrower, repayAmount);
         vm.stopPrank();
 
-        (uint256 collateralRemaining, uint256 borrowedRemaining, ) = borrowing
-            .loans(borrower);
+        (uint256 collateralRemaining, uint256 borrowedRemaining,) = borrowing.loans(borrower);
         assertEq(borrowedRemaining, borrowAmount - repayAmount);
         assertEq(collateralRemaining, depositAmount - expectedCollateralSeized);
     }
@@ -394,14 +383,12 @@ contract BorrowingTest is Test {
         borrowing.liquidateLoan(borrower, repayAmount);
         vm.stopPrank();
 
-        (uint256 collateralRemaining, uint256 borrowedRemaining, ) = borrowing
-            .loans(borrower);
+        (uint256 collateralRemaining, uint256 borrowedRemaining,) = borrowing.loans(borrower);
         // Après liquidation complète, le collatéral doit être épuisé.
         assertEq(collateralRemaining, 0);
         // Le montant de la dette devrait être réduit d'un montant équivalent à la valeur du collatéral saisi.
         // Calcul de l'ajustement de repayAmount: adjustedRepay = (depositAmount * 10000) / (10000 + liquidationIncentive)
-        uint256 adjustedRepay = (depositAmount * 10000) /
-            (10000 + liquidationIncentive);
+        uint256 adjustedRepay = (depositAmount * 10000) / (10000 + liquidationIncentive);
         if (adjustedRepay >= borrowAmount) {
             assertEq(borrowedRemaining, 0);
         } else {
@@ -409,10 +396,7 @@ contract BorrowingTest is Test {
         }
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -468,14 +452,14 @@ contract BorrowingTest is Test {
         borrowing.depositCollateral(depositAmount);
         borrowToken.mint(address(borrowing), borrowAmount);
         borrowing.borrow(borrowAmount);
-        (, uint256 initialDebt, ) = borrowing.loans(borrower);
+        (, uint256 initialDebt,) = borrowing.loans(borrower);
         // Avancer le temps de 1000 secondes
         vm.warp(block.timestamp + 1000);
         // Déclencher l'accrual d'intérêts
         vm.startPrank(governor);
         borrowing.triggerAccrual(borrower);
         vm.startPrank(borrower);
-        (, uint256 newDebt, ) = borrowing.loans(borrower);
+        (, uint256 newDebt,) = borrowing.loans(borrower);
         assertGt(newDebt, initialDebt);
         vm.stopPrank();
     }

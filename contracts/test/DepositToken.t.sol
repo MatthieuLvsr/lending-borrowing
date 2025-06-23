@@ -21,23 +21,13 @@ contract DepositTokenTest is Test {
         protocolAccessControl = new ProtocolAccessControl();
 
         // Deploy DepositToken contract
-        depositToken = new DepositToken(
-            "Deposit Token",
-            "dTOKEN",
-            address(protocolAccessControl)
-        );
+        depositToken = new DepositToken("Deposit Token", "dTOKEN", address(protocolAccessControl));
 
         // Grant the lending role to lendingContract in the shared access control
-        protocolAccessControl.grantRole(
-            protocolAccessControl.LENDING_ROLE(),
-            lendingContract
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.LENDING_ROLE(), lendingContract);
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";

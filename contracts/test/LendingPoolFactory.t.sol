@@ -27,39 +27,22 @@ contract LendingPoolFactoryTest is Test {
         protocolAccessControl = new ProtocolAccessControl();
 
         // Deploy a mock DepositTokenFactory
-        depositTokenFactory = new DepositTokenFactory(
-            address(protocolAccessControl)
-        );
+        depositTokenFactory = new DepositTokenFactory(address(protocolAccessControl));
 
         // Deploy the LendingPoolFactory contract
-        factory = new LendingPoolFactory(
-            address(depositTokenFactory),
-            address(protocolAccessControl)
-        );
+        factory = new LendingPoolFactory(address(depositTokenFactory), address(protocolAccessControl));
 
         // Deploy a mock ERC20 token
         mockToken = new MockERC20("Mock Token", "MOCK");
 
         // Grant the GOVERNOR_ROLE to the test contract and factory
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            governor
-        );
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            address(factory)
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), governor);
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), address(factory));
         // Grant DEFAULT_ADMIN_ROLE to factory so it can grant LENDING_ROLE to pools
-        protocolAccessControl.grantRole(
-            protocolAccessControl.DEFAULT_ADMIN_ROLE(),
-            address(factory)
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.DEFAULT_ADMIN_ROLE(), address(factory));
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -78,10 +61,7 @@ contract LendingPoolFactoryTest is Test {
         vm.startPrank(governor);
 
         // Create LendingPool
-        string memory tokenId = factory.createLendingPool(
-            address(mockToken),
-            interestRatePerSecond
-        );
+        string memory tokenId = factory.createLendingPool(address(mockToken), interestRatePerSecond);
 
         // Check that the token ID is correct
         assertEq(tokenId, "MOCK");

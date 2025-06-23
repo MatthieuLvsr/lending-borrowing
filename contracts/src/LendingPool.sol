@@ -35,18 +35,10 @@ contract LendingPool {
     ProtocolAccessControl public protocolAccessControl;
 
     /// @notice Emitted when a user deposits underlying tokens into the pool.
-    event Deposit(
-        address indexed user,
-        uint256 underlyingAmount,
-        uint256 tokenAmount
-    );
+    event Deposit(address indexed user, uint256 underlyingAmount, uint256 tokenAmount);
 
     /// @notice Emitted when a user withdraws funds from the pool.
-    event Withdraw(
-        address indexed user,
-        uint256 underlyingAmount,
-        uint256 tokenAmount
-    );
+    event Withdraw(address indexed user, uint256 underlyingAmount, uint256 tokenAmount);
 
     /**
      * @notice Initializes the lending pool contract.
@@ -74,10 +66,7 @@ contract LendingPool {
      * @param role The role to check.
      */
     modifier onlyRole(bytes32 role) {
-        require(
-            protocolAccessControl.hasRole(role, msg.sender),
-            "AccessControl: caller does not have required role"
-        );
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
         _;
     }
 
@@ -90,10 +79,7 @@ contract LendingPool {
         require(amount > 0, "Amount must be greater than zero");
 
         // Transfer underlying tokens from the user to the contract
-        require(
-            underlyingToken.transferFrom(msg.sender, address(this), amount),
-            "Transfer failed"
-        );
+        require(underlyingToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
         _accrueInterest();
 
@@ -116,17 +102,11 @@ contract LendingPool {
 
         // Calculate the equivalent underlying token amount: (tokenAmount * exchangeRate) / 1e18
         uint256 underlyingAmount = (tokenAmount * exchangeRate) / 1e18;
-        require(
-            underlyingToken.balanceOf(address(this)) >= underlyingAmount,
-            "Insufficient funds"
-        );
+        require(underlyingToken.balanceOf(address(this)) >= underlyingAmount, "Insufficient funds");
 
         // Burn `DepositToken` and transfer the equivalent underlying tokens
         depositToken.burn(msg.sender, tokenAmount);
-        require(
-            underlyingToken.transfer(msg.sender, underlyingAmount),
-            "Transfer failed"
-        );
+        require(underlyingToken.transfer(msg.sender, underlyingAmount), "Transfer failed");
 
         emit Withdraw(msg.sender, underlyingAmount, tokenAmount);
     }
@@ -139,17 +119,13 @@ contract LendingPool {
         uint256 currentTime = block.timestamp;
         if (currentTime > lastAccrualTimestamp) {
             uint256 timeElapsed = currentTime - lastAccrualTimestamp;
-            uint256 interestAccrued = (exchangeRate *
-                interestRatePerSecond *
-                timeElapsed) / 1e18;
+            uint256 interestAccrued = (exchangeRate * interestRatePerSecond * timeElapsed) / 1e18;
             exchangeRate += interestAccrued;
             lastAccrualTimestamp = currentTime;
         }
     }
 
-    function setInterestRate(
-        uint256 _value
-    ) external onlyRole(protocolAccessControl.GOVERNOR_ROLE()) {
+    function setInterestRate(uint256 _value) external onlyRole(protocolAccessControl.GOVERNOR_ROLE()) {
         interestRatePerSecond = _value;
     }
 }

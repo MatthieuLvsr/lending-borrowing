@@ -24,10 +24,7 @@ contract BorrowingFactory {
     /// @param borrowToken Address of the ERC20 token that will be borrowed.
     /// @param id Unique identifier for the borrowing pair (e.g., "ETH-DAI").
     event BorrowingCreated(
-        address indexed borrowingAddress,
-        address indexed collateralToken,
-        address indexed borrowToken,
-        string id
+        address indexed borrowingAddress, address indexed collateralToken, address indexed borrowToken, string id
     );
 
     constructor(address _protocolAccessControl) {
@@ -39,10 +36,7 @@ contract BorrowingFactory {
      * @param role The role to check.
      */
     modifier onlyRole(bytes32 role) {
-        require(
-            protocolAccessControl.hasRole(role, msg.sender),
-            "AccessControl: caller does not have required role"
-        );
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
         _;
     }
 
@@ -69,22 +63,14 @@ contract BorrowingFactory {
         uint256 _maxBorrowPercentage,
         uint256 _liquidationThreshold,
         uint256 _liquidationIncentive
-    )
-        external
-        onlyRole(protocolAccessControl.GOVERNOR_ROLE())
-        returns (string memory id)
-    {
+    ) external onlyRole(protocolAccessControl.GOVERNOR_ROLE()) returns (string memory id) {
         // Retrieve token symbols for identifier generation
-        string memory collateralSymbol = IERC20Metadata(_collateralToken)
-            .symbol();
+        string memory collateralSymbol = IERC20Metadata(_collateralToken).symbol();
         string memory borrowSymbol = IERC20Metadata(_borrowToken).symbol();
 
         // Generate a unique identifier from token symbols (e.g., "ETH-DAI")
         id = string(abi.encodePacked(collateralSymbol, "-", borrowSymbol));
-        require(
-            address(borrowings[id]) == address(0),
-            "Borrowing already exists"
-        );
+        require(address(borrowings[id]) == address(0), "Borrowing already exists");
 
         // Deploy `Borrowing` contract with specified parameters
         Borrowing borrowing = new Borrowing(
@@ -100,12 +86,7 @@ contract BorrowingFactory {
         );
         borrowings[id] = borrowing;
 
-        emit BorrowingCreated(
-            address(borrowing),
-            _collateralToken,
-            _borrowToken,
-            id
-        );
+        emit BorrowingCreated(address(borrowing), _collateralToken, _borrowToken, id);
 
         return id;
     }

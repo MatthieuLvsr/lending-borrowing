@@ -29,37 +29,21 @@ contract LendingPoolTest is Test {
         mockToken = new MockERC20("Mock Token", "MOCK");
 
         // Deploy a mock DepositToken
-        depositToken = new DepositToken(
-            "Deposit Mock Token",
-            "dMOCK",
-            address(protocolAccessControl)
-        );
+        depositToken = new DepositToken("Deposit Mock Token", "dMOCK", address(protocolAccessControl));
 
         // Deploy the LendingPool contract
         pool = new LendingPool(
-            address(mockToken),
-            address(depositToken),
-            interestRatePerSecond,
-            address(protocolAccessControl)
+            address(mockToken), address(depositToken), interestRatePerSecond, address(protocolAccessControl)
         );
 
         // Grant the LENDING_ROLE to the pool in the shared access control
-        protocolAccessControl.grantRole(
-            protocolAccessControl.LENDING_ROLE(),
-            address(pool)
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.LENDING_ROLE(), address(pool));
 
         // Grant the GOVERNOR_ROLE to the test contract
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            owner
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), owner);
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";

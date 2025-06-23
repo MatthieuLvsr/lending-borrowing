@@ -54,10 +54,7 @@ contract LendingPoolFactory {
      * @param role The role to check.
      */
     modifier onlyRole(bytes32 role) {
-        require(
-            protocolAccessControl.hasRole(role, msg.sender),
-            "AccessControl: caller does not have required role"
-        );
+        require(protocolAccessControl.hasRole(role, msg.sender), "AccessControl: caller does not have required role");
         _;
     }
 
@@ -73,10 +70,7 @@ contract LendingPoolFactory {
      * @param _interestRatePerSecond Interest rate per second (scaled to 1e18 precision).
      * @return id The generated identifier (derived from the underlying token's symbol) for the newly created `LendingPool`.
      */
-    function createLendingPool(
-        address _underlyingToken,
-        uint256 _interestRatePerSecond
-    )
+    function createLendingPool(address _underlyingToken, uint256 _interestRatePerSecond)
         external
         onlyRole(protocolAccessControl.GOVERNOR_ROLE())
         returns (string memory id)
@@ -87,42 +81,22 @@ contract LendingPoolFactory {
 
         // Use the token's symbol as the unique identifier
         id = tokenSymbol;
-        require(
-            address(lendingPools[id]) == address(0),
-            "LendingPool already exists"
-        );
+        require(address(lendingPools[id]) == address(0), "LendingPool already exists");
 
         // Deploy `DepositToken` via `DepositTokenFactory`
-        string memory depositTokenId = depositTokenFactory.createDepositToken(
-            _underlyingToken,
-            address(this)
-        );
-        DepositToken depositToken = depositTokenFactory.depositTokens(
-            depositTokenId
-        );
+        string memory depositTokenId = depositTokenFactory.createDepositToken(_underlyingToken, address(this));
+        DepositToken depositToken = depositTokenFactory.depositTokens(depositTokenId);
 
         // Deploy `LendingPool`, linking it with the underlying token, `DepositToken`, and interest rate
         LendingPool pool = new LendingPool(
-            _underlyingToken,
-            address(depositToken),
-            _interestRatePerSecond,
-            address(protocolAccessControl)
+            _underlyingToken, address(depositToken), _interestRatePerSecond, address(protocolAccessControl)
         );
         lendingPools[id] = pool;
 
         // Grant the LENDING_ROLE to the `LendingPool` in the shared access control contract
-        protocolAccessControl.grantRole(
-            protocolAccessControl.LENDING_ROLE(),
-            address(pool)
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.LENDING_ROLE(), address(pool));
 
-        emit LendingPoolCreated(
-            address(pool),
-            _underlyingToken,
-            address(depositToken),
-            id,
-            _interestRatePerSecond
-        );
+        emit LendingPoolCreated(address(pool), _underlyingToken, address(depositToken), id, _interestRatePerSecond);
         return id;
     }
 
@@ -131,9 +105,7 @@ contract LendingPoolFactory {
      * @param id Identifier derived from the symbol of the underlying token.
      * @return The `LendingPool` contract instance.
      */
-    function getLendingPool(
-        string memory id
-    ) external view returns (LendingPool) {
+    function getLendingPool(string memory id) external view returns (LendingPool) {
         return lendingPools[id];
     }
 }

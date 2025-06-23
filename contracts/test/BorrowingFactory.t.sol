@@ -41,16 +41,10 @@ contract BorrowingFactoryTest is Test {
         factory = new BorrowingFactory(address(protocolAccessControl));
 
         // Grant the GOVERNOR_ROLE to the test contract
-        protocolAccessControl.grantRole(
-            protocolAccessControl.GOVERNOR_ROLE(),
-            governor
-        );
+        protocolAccessControl.grantRole(protocolAccessControl.GOVERNOR_ROLE(), governor);
     }
 
-    function toHexString(
-        uint256 value,
-        uint256 length
-    ) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
