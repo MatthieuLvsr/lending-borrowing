@@ -2,11 +2,14 @@ name: CI - Solidity Smart Contracts
 
 on:
   pull_request:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/ci-contracts.yml"
   push:
     branches: [main, dev]
     paths:
-      - "front/**"
-      - ".github/workflows/ci-front.yml"
+      - "contracts/**"
+      - ".github/workflows/ci-contracts.yml"
 
 jobs:
   ci:
