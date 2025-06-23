@@ -32,8 +32,8 @@ const accountData: AccountData = {
 };
 
 export default function DashboardPage() {
-	const balance = useBalance();
-	const { address, isConnected } = useAppKitAccount({ namespace: "eip155" });
+	const _balance = useBalance();
+	const { isConnected } = useAppKitAccount({ namespace: "eip155" });
 
 	const [collateralRatio] = useState<number>(0);
 	const [transactionModal, setTransactionModal] = useState<{

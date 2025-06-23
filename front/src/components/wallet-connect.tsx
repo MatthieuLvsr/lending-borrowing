@@ -48,16 +48,23 @@ export function WalletConnect() {
 					<DropdownMenuContent align="end" className="w-56">
 						<DropdownMenuLabel className="flex justify-between items-center">
 							<span>Mon Wallet</span>
-							<span
+							<button
+								type="button"
 								className="hover:bg-accent hover:text-accent-foreground items-center gap-2 rounded-sm px-2 py-1.5
                 text-sm outline-hidden select-none cursor-pointer"
 								onClick={() => {
 									navigator.clipboard.writeText(address);
 									toast.success("Address copied.");
 								}}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										navigator.clipboard.writeText(address);
+										toast.success("Address copied.");
+									}
+								}}
 							>
 								{formatAddress(address)}
-							</span>
+							</button>
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
 						<div className="px-2 py-1.5 text-sm">

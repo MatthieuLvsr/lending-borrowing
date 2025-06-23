@@ -15,7 +15,7 @@ interface MarketTableProps {
 	pools: Pools;
 }
 
-export function MarketTable({ filter = "all", pools }: MarketTableProps) {
+export function MarketTable({ pools }: MarketTableProps) {
 	// Données simulées pour le tableau des marchés
 
 	// Filtrer les marchés en fonction du filtre sélectionné
@@ -76,7 +76,7 @@ export function MarketTable({ filter = "all", pools }: MarketTableProps) {
 	);
 }
 
-const markets = [
+const _markets = [
 	{
 		id: "eth",
 		name: "Ethereum",

@@ -33,7 +33,6 @@ export function PositionCard({
 	value,
 	apy,
 	iconUrl,
-	actionLabel,
 	isBorrow = false,
 	onDeposit,
 	onWithdraw,
