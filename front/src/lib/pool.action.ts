@@ -1,6 +1,7 @@
 'use server';
 
 import { readContract } from '@wagmi/core';
+import { revalidatePath } from 'next/cache';
 import { lendingPoolAbi, lendingPoolFactoryAbi } from '@/generated';
 import { config } from './wallet';
 
@@ -55,6 +56,11 @@ export const getPools = async (offset = 0) => {
 };
 
 export type Pools = Required<Awaited<ReturnType<typeof getPools>>>;
+
+export const revalidatePools = async () => {
+  revalidatePath('/app');
+  await Promise.resolve();
+};
 
 // Deprecated, now using array instead of mappings and events
 // export const publicClient = createPublicClient({

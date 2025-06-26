@@ -1,14 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isAddress, parseUnits } from 'viem';
-import {
-  type BaseError,
-  useWaitForTransactionReceipt,
-  useWriteContract,
-} from 'wagmi';
-import { lendingPoolFactoryAbi } from '@/generated';
-import { LENDING_POOL_FACTORY } from '@/lib/contracts';
+import { type BaseError, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteLendingPoolFactoryCreateLendingPool } from '@/generated';
+import { CONTRACT_ADDRESSES } from '@/lib/contracts';
+import { revalidatePools } from '@/lib/pool.action';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import {
@@ -26,33 +23,55 @@ interface NewPoolModalProps {
   trigger: React.ReactNode;
 }
 
-export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
-  const [open, setOpen] = useState(false);
-  const [underlyingToken, setUnderlyingToken] = useState('');
-  const [interestRate, setInterestRate] = useState('');
-  const [formErrors, setFormErrors] = useState<{
-    underlyingToken?: string;
-    interestRate?: string;
-  }>({});
+interface FormData {
+  underlyingToken: string;
+  interestRate: string;
+}
 
-  const { data: hash, error, isPending, writeContract } = useWriteContract();
+interface FormErrors {
+  underlyingToken?: string;
+  interestRate?: string;
+}
+
+export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
+  const {
+    writeContract,
+    data: hash,
+    isPending,
+    error,
+  } = useWriteLendingPoolFactoryCreateLendingPool();
+
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<FormData>({
+    underlyingToken: '',
+    interestRate: '',
+  });
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({
       hash,
     });
 
-  const validateForm = () => {
-    const errors: typeof formErrors = {};
+  useEffect(() => {
+    const handleRevalidation = async () => {
+      if (isConfirmed) {
+        await revalidatePools();
+      }
+    };
 
-    if (!underlyingToken.trim()) {
-      errors.underlyingToken = 'Underlying token address is required';
-    } else if (!isAddress(underlyingToken)) {
+    handleRevalidation();
+  }, [isConfirmed]);
+
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+
+    if (!isAddress(form.underlyingToken)) {
       errors.underlyingToken = 'Invalid Ethereum address';
     }
 
-    if (interestRate.trim()) {
-      const rate = Number.parseFloat(interestRate);
+    if (form.interestRate.trim()) {
+      const rate = Number.parseFloat(form.interestRate);
       if (Number.isNaN(rate) || rate < 0 || rate > 100) {
         errors.interestRate = 'Interest rate must be between 0 and 100';
       }
@@ -66,25 +85,39 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!validateForm()) {
       return;
     }
-    const annualRate = Number.parseFloat(interestRate) / 100;
-    const perSecondRate = (1 + annualRate) ** (1 / 31_536_000) - 1;
-    const scaledRate = parseUnits(perSecondRate.toString(), 18);
+
+    // Convert interest rate percentage to basis points (e.g., 5% = 500 basis points)
+    const interestRateInBasisPoints = parseUnits(form.interestRate, 2);
 
     writeContract({
-      address: LENDING_POOL_FACTORY,
-      abi: lendingPoolFactoryAbi,
-      functionName: 'createLendingPool',
-      args: [underlyingToken as `0x${string}`, scaledRate],
+      address: CONTRACT_ADDRESSES.LENDING_POOL_FACTORY,
+      args: [form.underlyingToken as `0x${string}`, interestRateInBasisPoints],
     });
   };
 
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Clear field error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [field]: undefined,
+      }));
+    }
+  };
+
   const resetForm = () => {
-    setUnderlyingToken('');
-    setInterestRate('');
+    setForm({
+      underlyingToken: '',
+      interestRate: '',
+    });
     setFormErrors({});
   };
 
@@ -97,12 +130,12 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
     }
   };
 
-  const getSubmitButtonText = () => {
+  const getSubmitButtonText = (): string => {
     if (isPending) {
-      return 'Confirming...';
+      return 'Creating Pool...';
     }
     if (isConfirming) {
-      return 'Creating...';
+      return 'Confirming...';
     }
     return 'Create Pool';
   };
@@ -126,18 +159,12 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
               className={formErrors.underlyingToken ? 'border-red-500' : ''}
               disabled={isPending || isConfirming}
               id="underlyingToken"
-              onChange={(e) => {
-                setUnderlyingToken(e.target.value);
-                if (formErrors.underlyingToken) {
-                  setFormErrors((prev) => ({
-                    ...prev,
-                    underlyingToken: undefined,
-                  }));
-                }
-              }}
+              onChange={(e) =>
+                handleInputChange('underlyingToken', e.target.value)
+              }
               placeholder="0x..."
               type="text"
-              value={underlyingToken}
+              value={form.underlyingToken}
             />
             {formErrors.underlyingToken && (
               <p className="text-red-500 text-sm">
@@ -154,19 +181,13 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
               id="interestRate"
               max="100"
               min="0"
-              onChange={(e) => {
-                setInterestRate(e.target.value);
-                if (formErrors.interestRate) {
-                  setFormErrors((prev) => ({
-                    ...prev,
-                    interestRate: undefined,
-                  }));
-                }
-              }}
+              onChange={(e) =>
+                handleInputChange('interestRate', e.target.value)
+              }
               placeholder="5.0"
               step="0.01"
               type="number"
-              value={interestRate}
+              value={form.interestRate}
             />
             {formErrors.interestRate && (
               <p className="text-red-500 text-sm">{formErrors.interestRate}</p>
@@ -179,7 +200,32 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
           {hash && (
             <Alert>
               <AlertDescription>
-                Transaction Hash: <code className="text-sm">{hash}</code>
+                <div className="flex w-full items-center justify-between gap-2">
+                  <code className="text-xs">
+                    Transaction Hash: {hash.slice(0, 6)}...{hash.slice(-4)}
+                  </code>
+                  <button
+                    className="cursor-pointer rounded p-1 duration-300 ease-in-out hover:bg-slate-800"
+                    onClick={() => navigator.clipboard.writeText(hash)}
+                    title="Copy to clipboard"
+                    type="button"
+                  >
+                    <svg
+                      fill="none"
+                      height="14"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      width="14"
+                    >
+                      <title>Copy to clipboard</title>
+                      <rect height="14" rx="2" ry="2" width="14" x="8" y="8" />
+                      <path d="m4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                    </svg>
+                  </button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -195,7 +241,8 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
           {isConfirmed && (
             <Alert className="border-green-200 bg-green-50">
               <AlertDescription className="text-green-800">
-                Lending pool created successfully!
+                Lending pool created successfully! The market data is being
+                refreshed.
               </AlertDescription>
             </Alert>
           )}
