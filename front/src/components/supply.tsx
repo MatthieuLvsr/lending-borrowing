@@ -24,9 +24,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   useReadDepositTokenAllowance,
+  useWriteErc20Approve,
   useWriteLendingPoolDeposit,
 } from '@/generated';
-import { CONTRACT_ADDRESSES } from '@/lib/contracts';
 import type { Pools } from '@/lib/pool.action';
 
 export function SupplyDialog({ pool }: { pool: Pools[0] }) {
@@ -157,10 +157,11 @@ const SupplyForm = ({
             setIsOpen={setIsOpen}
           />
         ) : (
-          <Button className="w-full" type="button" variant="outline">
-            Approve
-            {/* {isApproving ? 'Approving...' : `Approve ${pool.id}`} */}
-          </Button>
+          <ApproveButton
+            amount={amount}
+            pool={pool}
+            refetchAllowance={refetchAllowance}
+          />
         )}
       </DialogFooter>
     </>
@@ -217,6 +218,57 @@ const SupplyButton = ({
       type="button"
     >
       {isConfirming || isPending ? 'Supplying...' : 'Supply'}
+    </Button>
+  );
+};
+
+interface ApproveButtonProps {
+  amount: string;
+  pool: Pools[0];
+  refetchAllowance: () => void;
+}
+
+const ApproveButton = ({
+  amount,
+  pool,
+  refetchAllowance,
+}: ApproveButtonProps) => {
+  const {
+    writeContract,
+    data: hash,
+    isPending,
+    error,
+  } = useWriteErc20Approve();
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  const handleClick = () => {
+    writeContract({
+      address: pool.underlyingToken,
+      args: [pool.lendingPoolAddress, parseUnits(amount, 18)],
+    });
+  };
+
+  useEffect(() => {
+    if (isConfirmed) {
+      toast.success('Approval successful');
+      refetchAllowance();
+    } else if (error) {
+      toast.error('Approval failed');
+    }
+  }, [isConfirmed, error, refetchAllowance]);
+
+  return (
+    <Button
+      className="w-full"
+      disabled={isConfirming || isPending}
+      onClick={handleClick}
+      type="button"
+    >
+      {isConfirming || isPending ? 'Approving...' : 'Approve'}
     </Button>
   );
 };
