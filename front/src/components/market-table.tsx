@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { SupplyButton } from '@/components/supply';
+import { SupplyDialog } from '@/components/supply';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -60,7 +60,7 @@ export function MarketTable({ pools }: MarketTableProps) {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <SupplyButton pool={pool} />
+                  <SupplyDialog pool={pool} />
                   <Button size="sm">Borrow</Button>
                 </div>
               </TableCell>

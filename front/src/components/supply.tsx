@@ -1,10 +1,15 @@
 'use client';
 
 import { Copy } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { formatUnits, parseUnits } from 'viem';
-import { type UseBalanceReturnType, useAccount, useBalance } from 'wagmi';
+import {
+  type UseBalanceReturnType,
+  useAccount,
+  useBalance,
+  useWaitForTransactionReceipt,
+} from 'wagmi';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,10 +22,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useReadDepositTokenAllowance } from '@/generated';
+import {
+  useReadDepositTokenAllowance,
+  useWriteLendingPoolDeposit,
+} from '@/generated';
+import { CONTRACT_ADDRESSES } from '@/lib/contracts';
 import type { Pools } from '@/lib/pool.action';
 
-export function SupplyButton({ pool }: { pool: Pools[0] }) {
+export function SupplyDialog({ pool }: { pool: Pools[0] }) {
   const { address } = useAccount();
   const { data: balance, refetch: refetchBalance } = useBalance({
     address,
@@ -56,7 +65,13 @@ export function SupplyButton({ pool }: { pool: Pools[0] }) {
             APY
           </DialogDescription>
           {hasBalance && address && (
-            <SupplyForm balance={balance} pool={pool} userAddress={address} />
+            <SupplyForm
+              balance={balance}
+              pool={pool}
+              refetchBalance={refetchBalance}
+              setIsOpen={setIsOpen}
+              userAddress={address}
+            />
           )}
         </DialogHeader>
       </DialogContent>
@@ -67,10 +82,18 @@ export function SupplyButton({ pool }: { pool: Pools[0] }) {
 interface SupplyFormProps {
   userAddress: `0x${string}`;
   balance: NonNullable<UseBalanceReturnType['data']>;
+  refetchBalance: () => void;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   pool: Pools[0];
 }
 
-const SupplyForm = ({ userAddress, balance, pool }: SupplyFormProps) => {
+const SupplyForm = ({
+  userAddress,
+  balance,
+  pool,
+  refetchBalance,
+  setIsOpen,
+}: SupplyFormProps) => {
   const [amount, setAmount] = useState('');
 
   const { data: allowance, refetch: refetchAllowance } =
@@ -87,10 +110,6 @@ const SupplyForm = ({ userAddress, balance, pool }: SupplyFormProps) => {
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     setAmount(e.target.value);
-  };
-
-  const handleSubmit = () => {
-    // Implement your logic here
   };
 
   return (
@@ -131,10 +150,12 @@ const SupplyForm = ({ userAddress, balance, pool }: SupplyFormProps) => {
       </div>
       <DialogFooter>
         {isApprovalSufficient ? (
-          <Button className="w-full" type="button">
-            Supply
-            {/* {isApproving ? 'Approving...' : `Approve ${pool.id}`} */}
-          </Button>
+          <SupplyButton
+            amount={amount}
+            pool={pool}
+            refetchBalance={refetchBalance}
+            setIsOpen={setIsOpen}
+          />
         ) : (
           <Button className="w-full" type="button" variant="outline">
             Approve
@@ -143,5 +164,59 @@ const SupplyForm = ({ userAddress, balance, pool }: SupplyFormProps) => {
         )}
       </DialogFooter>
     </>
+  );
+};
+
+interface SupplyButtonProps {
+  amount: string;
+  pool: Pools[0];
+  refetchBalance: () => void;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const SupplyButton = ({
+  amount,
+  pool,
+  refetchBalance,
+  setIsOpen,
+}: SupplyButtonProps) => {
+  const {
+    writeContract,
+    data: hash,
+    isPending,
+    error,
+  } = useWriteLendingPoolDeposit();
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  const handleClick = () => {
+    writeContract({
+      address: pool.lendingPoolAddress,
+      args: [parseUnits(amount, 18)],
+    });
+  };
+
+  useEffect(() => {
+    if (isConfirmed) {
+      toast.success('Supply successful');
+      refetchBalance();
+      setIsOpen(false);
+    } else if (error) {
+      toast.error('Supply failed');
+    }
+  }, [isConfirmed, error, refetchBalance, setIsOpen]);
+
+  return (
+    <Button
+      className="w-full"
+      disabled={isConfirming || isPending}
+      onClick={handleClick}
+      type="button"
+    >
+      {isConfirming || isPending ? 'Supplying...' : 'Supply'}
+    </Button>
   );
 };
