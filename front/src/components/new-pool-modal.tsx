@@ -1,6 +1,8 @@
 'use client';
 
+import { Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { isAddress, parseUnits } from 'viem';
 import { type BaseError, useWaitForTransactionReceipt } from 'wagmi';
 import { useWriteLendingPoolFactoryCreateLendingPool } from '@/generated';
@@ -41,17 +43,17 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
     error,
   } = useWriteLendingPoolFactoryCreateLendingPool();
 
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormData>({
     underlyingToken: '',
     interestRate: '',
   });
-  const [formErrors, setFormErrors] = useState<FormErrors>({});
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    });
 
   useEffect(() => {
     const handleRevalidation = async () => {
@@ -62,6 +64,12 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
 
     handleRevalidation();
   }, [isConfirmed]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error((error as BaseError).shortMessage || error.message);
+    }
+  }, [error]);
 
   const validateForm = (): boolean => {
     const errors: FormErrors = {};
@@ -89,12 +97,12 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
       return;
     }
 
-    // Convert interest rate percentage to basis points (e.g., 5% = 500 basis points)
-    const interestRateInBasisPoints = parseUnits(form.interestRate, 2);
-
     writeContract({
       address: CONTRACT_ADDRESSES.LENDING_POOL_FACTORY,
-      args: [form.underlyingToken as `0x${string}`, interestRateInBasisPoints],
+      args: [
+        form.underlyingToken as `0x${string}`,
+        parseUnits(form.interestRate, 2),
+      ],
     });
   };
 
@@ -204,27 +212,13 @@ export const NewPoolModal = ({ trigger }: NewPoolModalProps) => {
                   <code className="text-xs">
                     Transaction Hash: {hash.slice(0, 6)}...{hash.slice(-4)}
                   </code>
-                  <button
-                    className="cursor-pointer rounded p-1 duration-300 ease-in-out hover:bg-slate-800"
-                    onClick={() => navigator.clipboard.writeText(hash)}
-                    title="Copy to clipboard"
-                    type="button"
-                  >
-                    <svg
-                      fill="none"
-                      height="14"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                      width="14"
-                    >
-                      <title>Copy to clipboard</title>
-                      <rect height="14" rx="2" ry="2" width="14" x="8" y="8" />
-                      <path d="m4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                    </svg>
-                  </button>
+                  <Copy
+                    className="size-4 cursor-pointer duration-300 ease-in-out hover:text-red-600"
+                    onClick={() => {
+                      navigator.clipboard.writeText(hash);
+                      toast.success('Hash address copied to clipboard');
+                    }}
+                  />
                 </div>
               </AlertDescription>
             </Alert>
